@@ -31,7 +31,7 @@
 #include "sip_tree_hash.h"
 
 //------------------------
-#include "smhasher.h"
+//#include "smhasher.h"
 
 uint64_t TimerTicks() {
 #ifdef _WIN32
@@ -202,7 +202,7 @@ int main(int argc, char* argv[]) {
   VerifyEqual("SipTree scalar", SipTreeHash, ScalarSipTreeHash);
   VerifyEqual("HighwayTree scalar", HighwayTreeHash, ScalarHighwayTreeHash);
 
-  RunAllTests(argc, argv);
+  //RunAllTests(argc, argv);
 
   return 0;
 }
