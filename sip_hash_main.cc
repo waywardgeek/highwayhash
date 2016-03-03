@@ -192,6 +192,27 @@ static void Benchmark(const char* caption, const Function& hash_function) {
 }
 
 int main(int argc, char* argv[]) {
+  const uint64_t key[4] {0x3bd39e10cb0ef593ull, 0xc0acf169b5f18a8cull,
+                         0xbe5466cf34e90c6cull, 0x452821e638d01377ull};
+  uint8_t message1 = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0
+  };
+  uint8_t message2 = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0
+  };
+  uint64_t hash1 = ScalarHighwayTreeHash(key, message1, 32);
+  uint64_t hash2 = ScalarHighwayTreeHash(key, message2, 64);
+  printf("hash1 = %lu, hash2 = %lu\n", hash1, hash2);
   Benchmark("ScalarSipTreeHash", ScalarSipTreeHash);
   Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash);
   Benchmark("SipHash", SipHash);
