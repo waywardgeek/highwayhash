@@ -27,6 +27,7 @@
 #include "highway_tree_hash256.h"
 #include "highway_tree_hash512.h"
 #include "highway_twisted_hash512.h"
+#include "highway_bush_hash512.h"
 #include "scalar_highway_tree_hash.h"
 #include "scalar_sip_tree_hash.h"
 #include "sip_hash.h"
@@ -204,6 +205,7 @@ int main(int argc, char* argv[]) {
   Benchmark("HighwayTreeHash256", HighwayTreeHash256, key256);
   Benchmark("HighwayTreeHash512", HighwayTreeHash512, key512);
   Benchmark("HighwayTwistedHash512", HighwayTwistedHash512, key512);
+  Benchmark("HighwayBushHash512", HighwayBushHash512, key512);
 
   VerifySipHash();
   VerifyEqual("SipTree scalar", SipTreeHash, ScalarSipTreeHash);
