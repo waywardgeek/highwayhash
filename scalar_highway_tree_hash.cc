@@ -32,7 +32,9 @@ class ScalarHighwayTreeHashState {
                          0xbe5466cf34e90c6cull, 0x452821e638d01377ull};
     for (int lane = 0; lane < kNumLanes; ++lane) {
       const uint64_t key = keys[lane];
-      v0[lane] = init0[lane] ^ key;
+      // It is better to XOR into one or the other.  This gives an attacker the
+      // ability to set v0, v1, or some combination.
+      v0[lane] = init0[lane];
       v1[lane] = init1[lane] ^ key;
     }
   }

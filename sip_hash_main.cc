@@ -24,7 +24,9 @@
 #endif
 
 #include "code_annotation.h"
-#include "highway_tree_hash.h"
+#include "highway_tree_hash256.h"
+#include "highway_tree_hash512.h"
+#include "highway_twisted_hash512.h"
 #include "scalar_highway_tree_hash.h"
 #include "scalar_sip_tree_hash.h"
 #include "sip_hash.h"
@@ -158,16 +160,13 @@ static void VerifyEqual(const char* caption, const Function1& hash_function1,
   printf("Verified %s.\n", caption);
 }
 
-template <class Function>
-static void Benchmark(const char* caption, const Function& hash_function) {
+template <class Function, int size>
+static void Benchmark(const char* caption, const Function& hash_function, const uint64_t (&key)[size]) {
   const int kSize = 1024;
   uint8_t in[kSize];
   for (int i = 0; i < kSize; ++i) {
     in[i] = static_cast<uint8_t>(i);
   }
-
-  const uint64_t key[4] = {0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
-                           0x1716151413121110ULL, 0x1F1E1D1C1B1A1918ULL};
 
   uint64_t sum = 1;
   uint64_t minTicks = 99999999999;
@@ -192,15 +191,23 @@ static void Benchmark(const char* caption, const Function& hash_function) {
 }
 
 int main(int argc, char* argv[]) {
-  Benchmark("ScalarSipTreeHash", ScalarSipTreeHash);
-  Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash);
-  Benchmark("SipHash", SipHash);
-  Benchmark("SipTreeHash", SipTreeHash);
-  Benchmark("HighwayTreeHash", HighwayTreeHash);
+  const uint64_t key256[4] = {0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
+                          0x1716151413121110ULL, 0x1F1E1D1C1B1A1918ULL};
+  const uint64_t key512[8] = {0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
+                          0x1716151413121110ULL, 0x1F1E1D1C1B1A1918ULL,
+                          0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
+                          0x1716151413121110ULL, 0x1F1E1D1C1B1A1918ULL};
+  //Benchmark("ScalarSipTreeHash", ScalarSipTreeHash);
+  //Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash);
+  //Benchmark("SipHash", SipHash);
+  Benchmark("SipTreeHash", SipTreeHash, key256);
+  Benchmark("HighwayTreeHash256", HighwayTreeHash256, key256);
+  Benchmark("HighwayTreeHash512", HighwayTreeHash512, key512);
+  Benchmark("HighwayTwistedHash512", HighwayTwistedHash512, key512);
 
   VerifySipHash();
   VerifyEqual("SipTree scalar", SipTreeHash, ScalarSipTreeHash);
-  VerifyEqual("HighwayTree scalar", HighwayTreeHash, ScalarHighwayTreeHash);
+  //VerifyEqual("HighwayTree scalar", HighwayTreeHash, ScalarHighwayTreeHash);
 
   //RunAllTests(argc, argv);
 

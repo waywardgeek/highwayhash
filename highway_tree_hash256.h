@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef HIGHWAYHASH_HIGHWAY_TREE_HASH_H_
-#define HIGHWAYHASH_HIGHWAY_TREE_HASH_H_
+#ifndef HIGHWAYHASH_HIGHWAY_TREE_HASH256_H_
+#define HIGHWAYHASH_HIGHWAY_TREE_HASH256_H_
 
 #include <cstdint>
 
@@ -27,7 +27,7 @@
 // "size" is the number of bytes to hash; exactly that many bytes are read.
 //
 // Returns a 64-bit hash of the given data bytes.
-uint64_t HighwayTreeHash(const uint64_t (&key)[4], const uint8_t* bytes,
+uint64_t HighwayTreeHash256(const uint64_t (&key)[4], const uint8_t* bytes,
                          const uint64_t size);
 
-#endif  // #ifndef HIGHWAYHASH_HIGHWAY_TREE_HASH_H_
+#endif  // #ifndef HIGHWAYHASH_HIGHWAY_TREE_HASH256_H_

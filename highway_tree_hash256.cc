@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "highway_tree_hash.h"
+#include "highway_tree_hash256.h"
 
 #include <cstring>  // memcpy
 #include "vec2.h"
@@ -27,9 +27,9 @@ namespace {
 const int kNumLanes = 4;
 const int kPacketSize = kNumLanes * sizeof(uint64_t);
 
-class HighwayTreeHashState {
+class HighwayTreeHashState256 {
  public:
-  explicit INLINE HighwayTreeHashState(const uint64_t (&keys)[kNumLanes]) {
+  explicit INLINE HighwayTreeHashState256(const uint64_t (&keys)[kNumLanes]) {
     // "Nothing up my sleeve" numbers, concatenated hex digits of Pi from
     // http://www.numberworld.org/digits/Pi/, retrieved Feb 22, 2016.
     //
@@ -49,20 +49,18 @@ def x(a,b,c):
     const V4x64U init1(0x452821e638d01377ull, 0xbe5466cf34e90c6cull,
                        0xc0acf169b5f18a8cull, 0x3bd39e10cb0ef593ull);
     const V4x64U key = LoadU(keys);
-    v0 = key ^ init0;
+    v0 = init0;
     v1 = key ^ init1;
   }
 
   INLINE void Update(const V4x64U& packet) {
-    v1 += packet;
-    // Improves the scrambling (otherwise the hash would have difficulty
-    // escaping states with near-zero v0). Adding more bits risks bias.
-    v0 |= V4x64U(0x0000000070000001ULL);
-    V4x64U mul0(_mm256_mul_epu32(v0, v1));
-    V4x64U mul1(_mm256_mul_epu32(v0, v1 >> 32));
-
-    v0 += ZipperMerge(mul0);
-    v1 += mul1;
+    v1 ^= packet;
+    V4x64U v0odd = v0 | V4x64U(0x0000000070000001ULL);
+    V4x64U v1odd = v1 | V4x64U(0x0000000070000001ULL);
+    V4x64U mul0(_mm256_mul_epu32(v0odd, v0 >> 32));
+    V4x64U mul1(_mm256_mul_epu32(v1odd, v1 >> 32));
+    v1 ^= ZipperMerge(mul0);
+    v0 ^= ZipperMerge(mul1);
   }
 
   INLINE uint64_t Finalize() {
@@ -76,7 +74,6 @@ def x(a,b,c):
     return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1, 0));
   }
 
- private:
   static INLINE V4x64U ZipperMerge(const V4x64U& v) {
     // Multiplication mixes/scrambles bytes 0-7 of the 64-bit result to
     // varying degrees. In descending order of goodness, bytes
@@ -151,9 +148,9 @@ static INLINE V4x64U LoadFinalPacket32(const uint8_t* bytes,
 
 }  // namespace
 
-uint64_t HighwayTreeHash(const uint64_t (&key)[kNumLanes], const uint8_t* bytes,
+uint64_t HighwayTreeHash256(const uint64_t (&key)[kNumLanes], const uint8_t* bytes,
                          const uint64_t size) {
-  HighwayTreeHashState state(key);
+  HighwayTreeHashState256 state(key);
 
   const size_t remainder = size & (kPacketSize - 1);
   const size_t truncated_size = size - remainder;

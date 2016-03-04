@@ -1,7 +1,9 @@
 CC=g++
 
 FILES= \
-highway_tree_hash.cc \
+highway_tree_hash256.cc \
+highway_tree_hash512.cc \
+highway_twisted_hash512.cc \
 scalar_highway_tree_hash.cc \
 scalar_sip_tree_hash.cc \
 sip_hash.cc \

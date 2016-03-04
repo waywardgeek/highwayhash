@@ -49,7 +49,8 @@ class SipTreeHashState {
   INLINE void Update(const V4x64U& packet) {
     v3 ^= packet;
 
-    Compress<2>();
+    //Compress<2>();
+    Compress<1>();
 
     v0 ^= packet;
   }
