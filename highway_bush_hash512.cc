@@ -51,8 +51,8 @@ def x(a,b,c):
     const V4x64U key = LoadU(keys);
     v0 = init0;
     v1 = key ^ init1;
-    v0 = init0; // TODO: choose better constants
-    v1 = init1;
+    v2 = init0; // TODO: choose better constants
+    v3 = init1;
   }
 
   INLINE void Update(const V4x64U& packet1, const V4x64U& packet2) {
