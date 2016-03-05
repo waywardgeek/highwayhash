@@ -163,7 +163,7 @@ static void VerifyEqual(const char* caption, const Function1& hash_function1,
 
 template <class Function, int size>
 static void Benchmark(const char* caption, const Function& hash_function, const uint64_t (&key)[size]) {
-  const int kSize = 1024;
+  const int kSize = 4096;
   uint8_t in[kSize];
   for (int i = 0; i < kSize; ++i) {
     in[i] = static_cast<uint8_t>(i);
