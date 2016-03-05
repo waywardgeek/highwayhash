@@ -55,15 +55,15 @@ class HighwayBushHashState512 {
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
     V4x64U permV0 = Permute(v2) + init0;
     V4x64U permV1 = Permute(v3) + init1;
-    V4x64U mul0(_mm256_mul_epu32(v0, packet1));
-    V4x64U mul1(_mm256_mul_epu32(v1, packet1 >> 32));
+    V4x64U mul0(_mm256_mul_epu32(v0 | V4x64U(1), packet1));
+    V4x64U mul1(_mm256_mul_epu32(v1 | V4x64U(1), packet1 >> 32));
     v0 += ZipperMerge(mul1) ^ permV1;
     v1 += ZipperMerge(mul0) ^ permV0;
 
     V4x64U permV2 = Permute(v2) + init0;
     V4x64U permV3 = Permute(v3) + init1;
-    V4x64U mul2(_mm256_mul_epu32(v2, packet2));
-    V4x64U mul3(_mm256_mul_epu32(v3, packet2 >> 32));
+    V4x64U mul2(_mm256_mul_epu32(v2 | V4x64U(1), packet2));
+    V4x64U mul3(_mm256_mul_epu32(v3 | V4x64U(1), packet2 >> 32));
     v2 += ZipperMerge(mul2) ^ permV3;
     v3 += ZipperMerge(mul3) ^ permV2;
   }
