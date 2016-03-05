@@ -53,14 +53,13 @@ class HighwayBushHashState512 {
   }
 
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
-    V4x64U permV0 = ZipperMerge(v0 + (packet1 << 32));
+    V4x64U permV0 = Permute(ZipperMerge(v0 + (packet1 << 32)));
     V4x64U permV1 = ZipperMerge(v1 + (packet1 >> 32));
     V4x64U permV2 = ZipperMerge(v2 + (packet2 << 32));
     V4x64U permV3 = ZipperMerge(v3 + (packet2 >> 32));
 
     V4x64U mul0(_mm256_mul_epu32(v0, v2));
     V4x64U mul1(_mm256_mul_epu32(v1, v3));
-    mul1 = Permute(mul1);
 
     v0 += (mul1 ^ permV2);
     v1 += (mul0 ^ permV3) + init0;
@@ -70,10 +69,10 @@ class HighwayBushHashState512 {
 
   INLINE uint64_t Finalize() {
     // Mix together all lanes.
-    PermuteAndUpdate();
-    PermuteAndUpdate();
-    PermuteAndUpdate();
-    PermuteAndUpdate();
+    Update(v0, v2);
+    Update(v1, v3);
+    Update(v2, v0);
+    Update(v3, v1);
 
     // Much faster than Store(v0 + v1) to uint64_t[].
     return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1, 0));

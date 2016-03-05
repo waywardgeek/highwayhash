@@ -54,18 +54,18 @@ class HighwayTwistedHashState512 {
   }
 
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
-    V4x64U permV0 = Permute(v0) + ((packet1 >> 32) ^ init0);
-    V4x64U permV1 = Permute(v1) + (packet1 << 32);
-    V4x64U permV2 = Permute(v2) + ((packet2 >> 32) ^ init1);
-    V4x64U permV3 = Permute(v3) + (packet2 << 32);
+    V4x64U permV0 = Permute(ZipperMerge(v0 + (packet1 << 32)));
+    V4x64U permV1 = ZipperMerge(v1 + (packet1 >> 32));
+    V4x64U permV2 = ZipperMerge(v2 + (packet2 << 32));
+    V4x64U permV3 = ZipperMerge(v3 + (packet2 >> 32));
 
     V4x64U mul0(_mm256_mul_epu32(v0, v2));
     V4x64U mul1(_mm256_mul_epu32(v1, v3));
 
-    v0 += mul1 ^ permV3;
-    v1 += mul0 ^ permV2;
-    v2 += mul1 ^ permV1;
-    v3 += mul0 ^ permV0;
+    v0 += (mul1 ^ permV2);
+    v1 += (mul0 ^ permV3) + init0;
+    v2 += (mul1 ^ permV0);
+    v3 += (mul0 ^ permV1) + init1;
   }
 
   INLINE void UpdatePacket(const uint64_t *packets) {
@@ -121,8 +121,8 @@ class HighwayTwistedHashState512 {
 
   INLINE uint64_t Finalize() {
     // Mix together all lanes.
-    Update(v2, v0);
-    Update(v3, v1);
+    Update(v0, v2);
+    Update(v1, v3);
     Update(v2, v0);
     Update(v3, v1);
 
