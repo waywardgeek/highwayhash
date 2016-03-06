@@ -56,7 +56,7 @@ class HighwayTwistedHashState512 {
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
     V4x64U permV0 = Permute(ZipperMerge(v0 + (packet1 << 32)));
     V4x64U permV1 = ZipperMerge(v1 + (packet1 >> 32));
-    V4x64U permV2 = ZipperMerge(v2 + (packet2 << 32));
+    V4x64U permV2 = Permute(ZipperMerge(v2 + (packet2 << 32)));
     V4x64U permV3 = ZipperMerge(v3 + (packet2 >> 32));
 
     V4x64U mul0(_mm256_mul_epu32(v0, v2 >> 32));
@@ -64,9 +64,9 @@ class HighwayTwistedHashState512 {
     V4x64U mul2(_mm256_mul_epu32(v0 >> 32, v2));
     V4x64U mul3(_mm256_mul_epu32(v1 >> 32, v3));
 
-    v0 += (mul1 ^ permV2);
+    v0 += mul1 ^ permV2;
     v1 += mul0 ^ (permV3 + init0);
-    v2 += (mul3 ^ permV0);
+    v2 += mul3 ^ permV0;
     v3 += mul2 ^ (permV1 + init1);
   }
 
