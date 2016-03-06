@@ -24,7 +24,6 @@
 #endif
 
 #include "code_annotation.h"
-#include "highway_tree_hash256.h"
 #include "highway_tree_hash512.h"
 #include "highway_twisted_hash512.h"
 #include "highway_bush_hash512.h"
@@ -202,7 +201,6 @@ int main(int argc, char* argv[]) {
   //Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash);
   //Benchmark("SipHash", SipHash);
   Benchmark("SipTreeHash", SipTreeHash, key256);
-  Benchmark("HighwayTreeHash256", HighwayTreeHash256, key256);
   Benchmark("HighwayTreeHash512", HighwayTreeHash512, key512);
   Benchmark("HighwayTwistedHash512", HighwayTwistedHash512, key512);
   Benchmark("HighwayBushHash512", HighwayBushHash512, key512);
