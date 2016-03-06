@@ -26,6 +26,10 @@ namespace {
 // one final 64-bit digest.
 const int kNumLanes = 4;
 const int kPacketSize = kNumLanes * sizeof(uint64_t);
+const V4x64U init0(0x243f6a8885a308d3ull, 0x13198a2e03707344ull,
+                   0xa4093822299f31d0ull, 0xdbe6d5d5fe4cce2full);
+const V4x64U init1(0x452821e638d01377ull, 0xbe5466cf34e90c6cull,
+                   0xc0acf169b5f18a8cull, 0x3bd39e10cb0ef593ull);
 
 class HighwayTreeHashState256 {
  public:
@@ -44,31 +48,28 @@ def x(a,b,c):
       retval |= 1 << i
   return retval
     */
-    const V4x64U init0(0x243f6a8885a308d3ull, 0x13198a2e03707344ull,
-                       0xa4093822299f31d0ull, 0xdbe6d5d5fe4cce2full);
-    const V4x64U init1(0x452821e638d01377ull, 0xbe5466cf34e90c6cull,
-                       0xc0acf169b5f18a8cull, 0x3bd39e10cb0ef593ull);
     const V4x64U key = LoadU(keys);
     v0 = init0;
     v1 = key ^ init1;
   }
 
   INLINE void Update(const V4x64U& packet) {
-    v1 ^= packet;
-    V4x64U v0odd = v0 | V4x64U(0x0000000070000001ULL);
-    V4x64U v1odd = v1 | V4x64U(0x0000000070000001ULL);
-    V4x64U mul0(_mm256_mul_epu32(v0odd, v0 >> 32));
-    V4x64U mul1(_mm256_mul_epu32(v1odd, v1 >> 32));
-    v1 ^= ZipperMerge(mul0);
-    v0 ^= ZipperMerge(mul1);
+    V4x64U permV0 = ZipperMerge(v0 + (packet << 32));
+    V4x64U permV1 = Permute(ZipperMerge(v1 + (packet >> 32)));
+
+    V4x64U mul0(_mm256_mul_epu32(v0, v0 >> 32));
+    V4x64U mul1(_mm256_mul_epu32(v1, v1 >> 32));
+
+    v0 += mul1 ^ permV1;
+    v1 += mul0 ^ (permV0 + init0);
   }
 
   INLINE uint64_t Finalize() {
     // Mix together all lanes.
-    PermuteAndUpdate();
-    PermuteAndUpdate();
-    PermuteAndUpdate();
-    PermuteAndUpdate();
+    Update(v0);
+    Update(v1);
+    Update(v0);
+    Update(v1);
 
     // Much faster than Store(v0 + v1) to uint64_t[].
     return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1, 0));
@@ -90,14 +91,14 @@ def x(a,b,c):
     return V4x64U(_mm256_shuffle_epi8(v, V4x64U(hi, lo, hi, lo)));
   }
 
-  INLINE void PermuteAndUpdate() {
+  INLINE V4x64U Permute(const V4x64U& val) {
     // For complete mixing, we need to swap the upper and lower 128-bit halves;
     // we also swap all 32-bit halves.
     const V4x64U indices(0x0000000200000003ull, 0x0000000000000001ull,
                          0x0000000600000007ull, 0x0000000400000005ull);
     // Slightly better to permute v0 than v1; it will be added to v1.
-    const V4x64U permuted(_mm256_permutevar8x32_epi32(v0, indices));
-    Update(permuted);
+    V4x64U permuted(_mm256_permutevar8x32_epi32(val, indices));
+    return permuted;
   }
 
   V4x64U v0;
