@@ -12,36 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef HIGHWAYHASH_SIP_TREE_HASH_H_
-#define HIGHWAYHASH_SIP_TREE_HASH_H_
+#ifndef HIGHWAYHASH_SCALAR_HIGHWAY_TREE_HASH512_H_
+#define HIGHWAYHASH_SCALAR_HIGHWAY_TREE_HASH512_H_
 
 #include <cstdint>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// Fast, cryptographically strong pseudo-random function. Useful for:
-// . hash tables holding attacker-controlled data. This function is
-//   immune to hash flooding DOS attacks because multi-collisions are
-//   infeasible to compute, provided the key remains secret.
-// . deterministic/idempotent 'random' number generation, e.g. for
-//   choosing a subset of items based on their contents.
+// J-lanes tree hash based upon multiplication and "zipper merges".
 //
 // Robust versus timing attacks because memory accesses are sequential
-// and the algorithm is branch-free. Compute time is proportional to the
-// number of 8-byte packets and 1.5x faster than an sse41 implementation.
-// Requires an AVX-2 capable CPU.
+// and the algorithm is branch-free. Requires an AVX-2 capable CPU.
 //
 // "key" is a secret 256-bit key unknown to attackers.
 // "bytes" is the data to hash (possibly unaligned).
 // "size" is the number of bytes to hash; exactly that many bytes are read.
+//
 // Returns a 64-bit hash of the given data bytes.
-uint64_t SipTreeHash(const uint64_t (&key)[4], const uint8_t* bytes,
-                     const uint64_t size);
+uint64_t ScalarHighwayTreeHash512(const uint64_t (&key)[4], const uint8_t* bytes,
+                         const uint64_t size);
 
-#ifdef __cplusplus
-}  // extern "C"
-#endif
-
-#endif  // #ifndef HIGHWAYHASH_SIP_TREE_HASH_H_
+#endif  // #ifndef HIGHWAYHASH_SCALAR_HIGHWAY_TREE_HASH512_H_

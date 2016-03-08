@@ -32,9 +32,7 @@ class ScalarHighwayTreeHashState {
                          0xbe5466cf34e90c6cull, 0x452821e638d01377ull};
     for (int lane = 0; lane < kNumLanes; ++lane) {
       const uint64_t key = keys[lane];
-      // It is better to XOR into one or the other.  This gives an attacker the
-      // ability to set v0, v1, or some combination.
-      v0[lane] = init0[lane];
+      v0[lane] = init0[lane] ^ key;
       v1[lane] = init1[lane] ^ key;
     }
   }
@@ -115,7 +113,7 @@ uint64_t ScalarHighwayTreeHash(const Lanes& key, const uint8_t* bytes,
   const size_t remainder = size & (kPacketSize - 1);
   const size_t truncated_size = size - remainder;
   const uint64_t* packets = reinterpret_cast<const uint64_t*>(bytes);
-  for (int i = 0; i < truncated_size / sizeof(uint64_t); i += kNumLanes) {
+  for (size_t i = 0; i < truncated_size / sizeof(uint64_t); i += kNumLanes) {
     state.Update(packets + i);
   }
 
@@ -123,7 +121,7 @@ uint64_t ScalarHighwayTreeHash(const Lanes& key, const uint8_t* bytes,
   const size_t remainder_mod4 = remainder & 3;
   uint32_t packet4 = static_cast<uint32_t>(size) << 24;
   const uint8_t* final_bytes = bytes + size - remainder_mod4;
-  for (int i = 0; i < remainder_mod4; ++i) {
+  for (size_t i = 0; i < remainder_mod4; ++i) {
     packet4 += static_cast<uint32_t>(final_bytes[i]) << (i * 8);
   }
 

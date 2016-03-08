@@ -16,7 +16,7 @@
 
 #include <cstring>  // memcpy
 #include <stdio.h>
-#include "vec2.h"
+#include "vec_scalar.h"
 
 namespace {
 
@@ -48,18 +48,33 @@ class HighwayTreeHashState512 {
   INLINE V4x64U Permute(const V4x64U& val) {
     // For complete mixing, we need to swap the upper and lower 128-bit halves;
     // we also swap all 32-bit halves.
-    const V4x64U indices(0x0000000200000003ull, 0x0000000000000001ull,
-                         0x0000000600000007ull, 0x0000000400000005ull);
     // Slightly better to permute v0 than v1; it will be added to v1.
-    V4x64U permuted(_mm256_permutevar8x32_epi32(val, indices));
+    V4x64U permuted;
+    uint64_t v = val.v_[0];
+    permuted.v_[2] = v >> 32 | v << 32;
+    v = val.v_[1];
+    permuted.v_[3] = v >> 32 | v << 32;
+    v = val.v_[2];
+    permuted.v_[0] = v >> 32 | v << 32;
+    v = val.v_[3];
+    permuted.v_[1] = v >> 32 | v << 32;
     return permuted;
   }
 
+  inline V4x64U Multiply(const V4x64U& a, const V4x64U& b) {
+      V4x64U r;
+      r.v_[0] = uint64_t(uint32_t(a.v_[0]))*uint32_t(b.v_[0]);
+      r.v_[1] = uint64_t(uint32_t(a.v_[1]))*uint32_t(b.v_[1]);
+      r.v_[2] = uint64_t(uint32_t(a.v_[2]))*uint32_t(b.v_[2]);
+      r.v_[3] = uint64_t(uint32_t(a.v_[3]))*uint32_t(b.v_[3]);
+      return r;
+  }
+
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
-    V4x64U mul0(_mm256_mul_epu32(v0, Permute(v2)));
-    V4x64U mul1(_mm256_mul_epu32(v1, Permute(v3)));
-    V4x64U mul2(_mm256_mul_epu32(v0 >> 32, v2));
-    V4x64U mul3(_mm256_mul_epu32(v1 >> 32, v3));
+    V4x64U mul0(Multiply(v0, Permute(v2)));
+    V4x64U mul1(Multiply(v1, Permute(v3)));
+    V4x64U mul2(Multiply(v0 >> 32, v2));
+    V4x64U mul3(Multiply(v1 >> 32, v3));
 
     const V4x64U mask(0x00ff00ff00ff00ffull);
     v0 ^= packet1 & mask;
@@ -130,31 +145,39 @@ class HighwayTreeHashState512 {
     Update(v2, v0);
     Update(v3, v1);
 
-    // Much faster than Store(v0 + v1) to uint64_t[].
-    return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1, 0));
+    return v0.v_[0] + v1.v_[0];
   }
 
-  static INLINE V4x64U ZipperMerge(const V4x64U& v) {
-    // Multiplication mixes/scrambles bytes 0-7 of the 64-bit result to
-    // varying degrees. In descending order of goodness, bytes
-    // 3 4 2 5 1 6 0 7 have quality 228 224 164 160 100 96 36 32.
-    // As expected, the upper and lower bytes are much worse.
-    // For each 64-bit lane, our objectives are:
-    // 1) maximizing and equalizing total goodness across the four lanes.
-    // 2) mixing with bytes from the neighboring lane (AVX-2 makes it difficult
-    //    to cross the 128-bit wall, but PermuteAndUpdate takes care of that);
-    // 3) placing the worst bytes in the upper 32 bits because those will not
-    //    be used in the next 32x32 multiplication.
-    const uint64_t hi = 0x070806090D0A040Bull;
-    const uint64_t lo = 0x000F010E05020C03ull;
-    return V4x64U(_mm256_shuffle_epi8(v, V4x64U(hi, lo, hi, lo)));
+  static INLINE V4x64U ZipperMerge(const V4x64U& val) {
+    const uint8_t *v = reinterpret_cast<const uint8_t*>(val.v_);
+    V4x64U res;
+    uint8_t *r = reinterpret_cast<uint8_t*>(res.v_);
+    for (int half = 0; half < 32; half += 32 / 2) {
+      r[half + 0] = v[half + 3];
+      r[half + 1] = v[half + 12];
+      r[half + 2] = v[half + 2];
+      r[half + 3] = v[half + 5];
+      r[half + 4] = v[half + 14];
+      r[half + 5] = v[half + 1];
+      r[half + 6] = v[half + 15];
+      r[half + 7] = v[half + 0];
+      r[half + 8] = v[half + 11];
+      r[half + 9] = v[half + 4];
+      r[half + 10] = v[half + 10];
+      r[half + 11] = v[half + 13];
+      r[half + 12] = v[half + 9];
+      r[half + 13] = v[half + 6];
+      r[half + 14] = v[half + 8];
+      r[half + 15] = v[half + 7];
+    }
+    return res;
   }
 
   void print() {
-      v0.print("v0");
-      v1.print("v1");
-      v2.print("v2");
-      v3.print("v3");
+    printf("v0 = %016lx%016lx%016lx%016lx\n", v0.v_[3], v0.v_[2], v0.v_[1], v0.v_[0]);
+    printf("v1 = %016lx%016lx%016lx%016lx\n", v1.v_[3], v1.v_[2], v1.v_[1], v1.v_[0]);
+    printf("v2 = %016lx%016lx%016lx%016lx\n", v2.v_[3], v2.v_[2], v2.v_[1], v2.v_[0]);
+    printf("v3 = %016lx%016lx%016lx%016lx\n", v3.v_[3], v3.v_[2], v3.v_[1], v3.v_[0]);
   }
 
   V4x64U init0;
@@ -167,7 +190,7 @@ class HighwayTreeHashState512 {
 
 }  // namespace
 
-uint64_t HighwayTreeHash512(const uint64_t (&key)[4], const uint8_t* bytes,
+uint64_t ScalarHighwayTreeHash512(const uint64_t (&key)[4], const uint8_t* bytes,
                          const uint64_t size) {
   HighwayTreeHashState512 state(key);
 

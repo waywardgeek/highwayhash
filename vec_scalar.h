@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef HIGHWAYHASH_VEC2_H_
-#define HIGHWAYHASH_VEC2_H_
-
-#include <stdio.h>
+#ifndef HIGHWAYHASH_VEC_SCALAR_H_
+#define HIGHWAYHASH_VEC_SCALAR_H_
 
 // Defines SIMD vector classes ("V4x64U") with overloaded arithmetic operators:
 // const V4x64U masked_sum = (a + b) & m;
@@ -37,81 +35,87 @@
 class V4x64U {
  public:
   using T = uint64_t;
-  static constexpr size_t kNumLanes = sizeof(__m256i) / sizeof(T);
+  static constexpr size_t kNumLanes = 4;
 
   // Leaves v_ uninitialized - typically used for output parameters.
   INLINE V4x64U() {}
 
   // Lane 0 (p_0) is the lowest.
-  INLINE V4x64U(T p_3, T p_2, T p_1, T p_0)
-      : v_(_mm256_set_epi64x(p_3, p_2, p_1, p_0)) {}
+  INLINE V4x64U(T p_3, T p_2, T p_1, T p_0) {
+    v_[0] = p_0;
+    v_[1] = p_1;
+    v_[2] = p_2;
+    v_[3] = p_3;
+  }
 
   // Broadcasts i to all lanes.
-  INLINE explicit V4x64U(T i)
-      : v_(_mm256_broadcastq_epi64(_mm_cvtsi64_si128(i))) {}
-
-  // Converts to/from intrinsics.
-  INLINE explicit V4x64U(const __m256i& v) : v_(v) {}
-  INLINE operator __m256i() const { return v_; }
-  INLINE V4x64U& operator=(const __m256i& v) {
-    v_ = v;
-    return *this;
+  INLINE explicit V4x64U(T i) {
+    v_[0] = i;
+    v_[1] = i;
+    v_[2] = i;
+    v_[3] = i;
   }
 
   // _mm256_setzero_epi64 generates suboptimal code. Instead set
   // z = x - x (given an existing "x"), or x == x to set all bits.
   INLINE V4x64U& operator=(const V4x64U& other) {
-    v_ = other.v_;
+    for(uint32_t i = 0; i < kNumLanes; i++) {
+        v_[i] = other.v_[i];
+    }
     return *this;
   }
 
   INLINE V4x64U& operator+=(const V4x64U& other) {
-    v_ = _mm256_add_epi64(v_, other);
+    for(uint32_t i = 0; i < kNumLanes; i++) {
+        v_[i] += other.v_[i];
+    }
     return *this;
   }
   INLINE V4x64U& operator-=(const V4x64U& other) {
-    v_ = _mm256_sub_epi64(v_, other);
+    for(uint32_t i = 0; i < kNumLanes; i++) {
+        v_[i] -= other.v_[i];
+    }
     return *this;
   }
 
   INLINE V4x64U& operator&=(const V4x64U& other) {
-    v_ = _mm256_and_si256(v_, other);
+    for(uint32_t i = 0; i < kNumLanes; i++) {
+        v_[i] &= other.v_[i];
+    }
     return *this;
   }
   INLINE V4x64U& operator|=(const V4x64U& other) {
-    v_ = _mm256_or_si256(v_, other);
+    for(uint32_t i = 0; i < kNumLanes; i++) {
+        v_[i] |= other.v_[i];
+    }
     return *this;
   }
   INLINE V4x64U& operator^=(const V4x64U& other) {
-    v_ = _mm256_xor_si256(v_, other);
+    for(uint32_t i = 0; i < kNumLanes; i++) {
+        v_[i] ^= other.v_[i];
+    }
     return *this;
   }
 
   INLINE V4x64U& operator<<=(const int count) {
-    v_ = _mm256_slli_epi64(v_, count);
-    return *this;
-  }
-  INLINE V4x64U& operator<<=(const __m128i& count) {
-    v_ = _mm256_sll_epi64(v_, count);
+    for(uint32_t i = 0; i < kNumLanes; i++) {
+        v_[i] <<= count;
+    }
     return *this;
   }
 
   INLINE V4x64U& operator>>=(const int count) {
-    v_ = _mm256_srli_epi64(v_, count);
-    return *this;
-  }
-  INLINE V4x64U& operator>>=(const __m128i& count) {
-    v_ = _mm256_srl_epi64(v_, count);
+    for(uint32_t i = 0; i < kNumLanes; i++) {
+        v_[i] >>= count;
+    }
     return *this;
   }
 
   void print(const char *name) {
-    const uint64_t *p = reinterpret_cast<const uint64_t*>(&v_);
-    printf("%s = %016lx%016lx%016lx%016lx\n", name, p[3], p[2], p[1], p[0]);
+    printf("%s = %016lx%016lx%016lx%016lx\n", name, v_[3], v_[2], v_[1], v_[0]);
   }
 
- private:
-  __m256i v_;
+  uint64_t v_[kNumLanes];
 };
 
 // Nonmember functions implemented in terms of member functions
@@ -136,16 +140,6 @@ static INLINE V4x64U operator>>(const V4x64U& v, const int count) {
   return t >>= count;
 }
 
-static INLINE V4x64U operator<<(const V4x64U& v, const __m128i& count) {
-  V4x64U t(v);
-  return t <<= count;
-}
-
-static INLINE V4x64U operator>>(const V4x64U& v, const __m128i& count) {
-  V4x64U t(v);
-  return t >>= count;
-}
-
 static INLINE V4x64U operator&(const V4x64U& left, const V4x64U& right) {
   V4x64U t(left);
   return t &= right;
@@ -165,44 +159,46 @@ static INLINE V4x64U operator^(const V4x64U& left, const V4x64U& right) {
 
 // "from" must be vector-aligned.
 static INLINE V4x64U Load(const uint64_t* RESTRICT const from) {
-  return V4x64U(_mm256_load_si256(reinterpret_cast<const __m256i*>(from)));
+  return V4x64U(from[3], from[2], from[1], from[0]);
 }
 
 static INLINE V4x64U LoadU(const uint64_t* RESTRICT const from) {
-  return V4x64U(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(from)));
+  return V4x64U(from[3], from[2], from[1], from[0]);
 }
 
 // "to" must be vector-aligned.
 static INLINE void Store(const V4x64U& v, uint64_t* RESTRICT const to) {
-  _mm256_store_si256(reinterpret_cast<__m256i*>(to), v);
+    to[0] = v.v_[0];
+    to[1] = v.v_[1];
+    to[2] = v.v_[2];
+    to[3] = v.v_[3];
 }
 
 static INLINE void StoreU(const V4x64U& v, uint64_t* RESTRICT const to) {
-  _mm256_storeu_si256(reinterpret_cast<__m256i*>(to), v);
-}
-
-// Writes directly to (aligned) memory, bypassing the cache. This is useful for
-// data that will not be read again in the near future.
-static INLINE void Stream(const V4x64U& v, uint64_t* RESTRICT const to) {
-  _mm256_stream_si256(reinterpret_cast<__m256i*>(to), v);
+    to[0] = v.v_[0];
+    to[1] = v.v_[1];
+    to[2] = v.v_[2];
+    to[3] = v.v_[3];
 }
 
 // Miscellaneous functions.
 
 static INLINE V4x64U AndNot(const V4x64U& neg_mask, const V4x64U& values) {
-  return V4x64U(_mm256_andnot_si256(neg_mask, values));
-}
-
-static INLINE V4x64U UnpackLow(const V4x64U& low, const V4x64U& high) {
-  return V4x64U(_mm256_unpacklo_epi64(low, high));
-}
-static INLINE V4x64U UnpackHigh(const V4x64U& low, const V4x64U& high) {
-  return V4x64U(_mm256_unpackhi_epi64(low, high));
+  V4x64U res;
+  for(uint32_t i = 0; i < V4x64U::kNumLanes; i++) {
+    res.v_[i] = ~neg_mask.v_[i] & values.v_[i];
+  }
+  return res;
 }
 
 // There are no greater-than comparison instructions for unsigned T.
-static INLINE V4x64U operator==(const V4x64U& left, const V4x64U& right) {
-  return V4x64U(_mm256_cmpeq_epi64(left, right));
+static INLINE bool operator==(const V4x64U& left, const V4x64U& right) {
+  for(uint32_t i = 0; i < V4x64U::kNumLanes; i++) {
+    if(left.v_[i] != right.v_[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
-#endif  // #ifndef HIGHWAYHASH_VEC2_H_
+#endif  // #ifndef HIGHWAYHASH_VEC_SCALAR_H_
