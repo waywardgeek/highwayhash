@@ -33,25 +33,28 @@
 #include <cstdint>
 #include "code_annotation.h"
 
+class V4x64U_cl;
+typedef ALIGNED(V4x64U_cl, 64) V4x64U;
+
 // 256-bit AVX-2 vector with 4 uint64_t lanes.
-class V4x64U {
+class V4x64U_cl {
  public:
   using T = uint64_t;
   static constexpr size_t kNumLanes = sizeof(__m256i) / sizeof(T);
 
   // Leaves v_ uninitialized - typically used for output parameters.
-  INLINE V4x64U() {}
+  INLINE V4x64U_cl() {}
 
   // Lane 0 (p_0) is the lowest.
-  INLINE V4x64U(T p_3, T p_2, T p_1, T p_0)
+  INLINE V4x64U_cl(T p_3, T p_2, T p_1, T p_0)
       : v_(_mm256_set_epi64x(p_3, p_2, p_1, p_0)) {}
 
   // Broadcasts i to all lanes.
-  INLINE explicit V4x64U(T i)
+  INLINE explicit V4x64U_cl(T i)
       : v_(_mm256_broadcastq_epi64(_mm_cvtsi64_si128(i))) {}
 
   // Converts to/from intrinsics.
-  INLINE explicit V4x64U(const __m256i& v) : v_(v) {}
+  INLINE explicit V4x64U_cl(const __m256i& v) : v_(v) {}
   INLINE operator __m256i() const { return v_; }
   INLINE V4x64U& operator=(const __m256i& v) {
     v_ = v;

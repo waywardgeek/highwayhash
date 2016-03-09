@@ -15,8 +15,8 @@
 #ifndef HIGHWAYHASH_VEC_SCALAR_H_
 #define HIGHWAYHASH_VEC_SCALAR_H_
 
-// Defines SIMD vector classes ("V4x64U") with overloaded arithmetic operators:
-// const V4x64U masked_sum = (a + b) & m;
+// Defines SIMD vector classes ("V4x64S") with overloaded arithmetic operators:
+// const V4x64S masked_sum = (a + b) & m;
 // This is shorter and more readable than compiler intrinsics:
 // const __m256i masked_sum = _mm256_and_si256(_mm256_add_epi64(a, b), m);
 // There is typically no runtime cost for these abstractions.
@@ -31,17 +31,20 @@
 #include <cstdint>
 #include "code_annotation.h"
 
+class V4x64S_cl;
+typedef ALIGNED(V4x64S_cl, 64) V4x64S;
+
 // 256-bit AVX-2 vector with 4 uint64_t lanes.
-class V4x64U {
+class V4x64S_cl {
  public:
   using T = uint64_t;
   static constexpr size_t kNumLanes = 4;
 
   // Leaves v_ uninitialized - typically used for output parameters.
-  INLINE V4x64U() {}
+  INLINE V4x64S_cl() {}
 
   // Lane 0 (p_0) is the lowest.
-  INLINE V4x64U(T p_3, T p_2, T p_1, T p_0) {
+  INLINE V4x64S_cl(T p_3, T p_2, T p_1, T p_0) {
     v_[0] = p_0;
     v_[1] = p_1;
     v_[2] = p_2;
@@ -49,7 +52,7 @@ class V4x64U {
   }
 
   // Broadcasts i to all lanes.
-  INLINE explicit V4x64U(T i) {
+  INLINE explicit V4x64S_cl(T i) {
     v_[0] = i;
     v_[1] = i;
     v_[2] = i;
@@ -58,53 +61,53 @@ class V4x64U {
 
   // _mm256_setzero_epi64 generates suboptimal code. Instead set
   // z = x - x (given an existing "x"), or x == x to set all bits.
-  INLINE V4x64U& operator=(const V4x64U& other) {
+  INLINE V4x64S& operator=(const V4x64S& other) {
     for(uint32_t i = 0; i < kNumLanes; i++) {
         v_[i] = other.v_[i];
     }
     return *this;
   }
 
-  INLINE V4x64U& operator+=(const V4x64U& other) {
+  INLINE V4x64S& operator+=(const V4x64S& other) {
     for(uint32_t i = 0; i < kNumLanes; i++) {
         v_[i] += other.v_[i];
     }
     return *this;
   }
-  INLINE V4x64U& operator-=(const V4x64U& other) {
+  INLINE V4x64S& operator-=(const V4x64S& other) {
     for(uint32_t i = 0; i < kNumLanes; i++) {
         v_[i] -= other.v_[i];
     }
     return *this;
   }
 
-  INLINE V4x64U& operator&=(const V4x64U& other) {
+  INLINE V4x64S& operator&=(const V4x64S& other) {
     for(uint32_t i = 0; i < kNumLanes; i++) {
         v_[i] &= other.v_[i];
     }
     return *this;
   }
-  INLINE V4x64U& operator|=(const V4x64U& other) {
+  INLINE V4x64S& operator|=(const V4x64S& other) {
     for(uint32_t i = 0; i < kNumLanes; i++) {
         v_[i] |= other.v_[i];
     }
     return *this;
   }
-  INLINE V4x64U& operator^=(const V4x64U& other) {
+  INLINE V4x64S& operator^=(const V4x64S& other) {
     for(uint32_t i = 0; i < kNumLanes; i++) {
         v_[i] ^= other.v_[i];
     }
     return *this;
   }
 
-  INLINE V4x64U& operator<<=(const int count) {
+  INLINE V4x64S& operator<<=(const int count) {
     for(uint32_t i = 0; i < kNumLanes; i++) {
         v_[i] <<= count;
     }
     return *this;
   }
 
-  INLINE V4x64U& operator>>=(const int count) {
+  INLINE V4x64S& operator>>=(const int count) {
     for(uint32_t i = 0; i < kNumLanes; i++) {
         v_[i] >>= count;
     }
@@ -120,61 +123,61 @@ class V4x64U {
 
 // Nonmember functions implemented in terms of member functions
 
-static INLINE V4x64U operator+(const V4x64U& left, const V4x64U& right) {
-  V4x64U t(left);
+static INLINE V4x64S operator+(const V4x64S& left, const V4x64S& right) {
+  V4x64S t(left);
   return t += right;
 }
 
-static INLINE V4x64U operator-(const V4x64U& left, const V4x64U& right) {
-  V4x64U t(left);
+static INLINE V4x64S operator-(const V4x64S& left, const V4x64S& right) {
+  V4x64S t(left);
   return t -= right;
 }
 
-static INLINE V4x64U operator<<(const V4x64U& v, const int count) {
-  V4x64U t(v);
+static INLINE V4x64S operator<<(const V4x64S& v, const int count) {
+  V4x64S t(v);
   return t <<= count;
 }
 
-static INLINE V4x64U operator>>(const V4x64U& v, const int count) {
-  V4x64U t(v);
+static INLINE V4x64S operator>>(const V4x64S& v, const int count) {
+  V4x64S t(v);
   return t >>= count;
 }
 
-static INLINE V4x64U operator&(const V4x64U& left, const V4x64U& right) {
-  V4x64U t(left);
+static INLINE V4x64S operator&(const V4x64S& left, const V4x64S& right) {
+  V4x64S t(left);
   return t &= right;
 }
 
-static INLINE V4x64U operator|(const V4x64U& left, const V4x64U& right) {
-  V4x64U t(left);
+static INLINE V4x64S operator|(const V4x64S& left, const V4x64S& right) {
+  V4x64S t(left);
   return t |= right;
 }
 
-static INLINE V4x64U operator^(const V4x64U& left, const V4x64U& right) {
-  V4x64U t(left);
+static INLINE V4x64S operator^(const V4x64S& left, const V4x64S& right) {
+  V4x64S t(left);
   return t ^= right;
 }
 
 // Load/Store.
 
 // "from" must be vector-aligned.
-static INLINE V4x64U Load(const uint64_t* RESTRICT const from) {
-  return V4x64U(from[3], from[2], from[1], from[0]);
+static INLINE V4x64S Load(const uint64_t* RESTRICT const from) {
+  return V4x64S(from[3], from[2], from[1], from[0]);
 }
 
-static INLINE V4x64U LoadU(const uint64_t* RESTRICT const from) {
-  return V4x64U(from[3], from[2], from[1], from[0]);
+static INLINE V4x64S LoadU(const uint64_t* RESTRICT const from) {
+  return V4x64S(from[3], from[2], from[1], from[0]);
 }
 
 // "to" must be vector-aligned.
-static INLINE void Store(const V4x64U& v, uint64_t* RESTRICT const to) {
+static INLINE void Store(const V4x64S& v, uint64_t* RESTRICT const to) {
     to[0] = v.v_[0];
     to[1] = v.v_[1];
     to[2] = v.v_[2];
     to[3] = v.v_[3];
 }
 
-static INLINE void StoreU(const V4x64U& v, uint64_t* RESTRICT const to) {
+static INLINE void StoreU(const V4x64S& v, uint64_t* RESTRICT const to) {
     to[0] = v.v_[0];
     to[1] = v.v_[1];
     to[2] = v.v_[2];
@@ -183,17 +186,17 @@ static INLINE void StoreU(const V4x64U& v, uint64_t* RESTRICT const to) {
 
 // Miscellaneous functions.
 
-static INLINE V4x64U AndNot(const V4x64U& neg_mask, const V4x64U& values) {
-  V4x64U res;
-  for(uint32_t i = 0; i < V4x64U::kNumLanes; i++) {
+static INLINE V4x64S AndNot(const V4x64S& neg_mask, const V4x64S& values) {
+  V4x64S res;
+  for(uint32_t i = 0; i < V4x64S::kNumLanes; i++) {
     res.v_[i] = ~neg_mask.v_[i] & values.v_[i];
   }
   return res;
 }
 
 // There are no greater-than comparison instructions for unsigned T.
-static INLINE bool operator==(const V4x64U& left, const V4x64U& right) {
-  for(uint32_t i = 0; i < V4x64U::kNumLanes; i++) {
+static INLINE bool operator==(const V4x64S& left, const V4x64S& right) {
+  for(uint32_t i = 0; i < V4x64S::kNumLanes; i++) {
     if(left.v_[i] != right.v_[i]) {
       return false;
     }

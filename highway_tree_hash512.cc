@@ -26,16 +26,17 @@ namespace {
 // four 64-bit packets per Update(). Finalize() combines the four states into
 // one final 64-bit digest.
 const int kNumLanes = 4;
-const int kGraphSize = 8;
-const int kBlockSize = 2 * kNumLanes * sizeof(uint64_t);
-const int kPacketSize = kGraphSize * kBlockSize;
+const int kBlockShift = 6;
+const int kBlockSize = 1 << kBlockShift;  // 64
+const int kPacketShift = 9;
+const int kPacketSize = 1 << kPacketShift;  // 512
 
 class HighwayTreeHashState512 {
  public:
   explicit INLINE HighwayTreeHashState512(const uint64_t (&keys)[kNumLanes]) {
-    init0 = V4x64U(0x243f6a8885a308d3ull, 0x13198a2e03707344ull,
+    const V4x64U init0(0x243f6a8885a308d3ull, 0x13198a2e03707344ull,
         0xa4093822299f31d0ull, 0xdbe6d5d5fe4cce2full);
-    init1 = V4x64U(0x452821e638d01377ull, 0xbe5466cf34e90c6cull,
+    const V4x64U init1(0x452821e638d01377ull, 0xbe5466cf34e90c6cull,
         0xc0acf169b5f18a8cull, 0x3bd39e10cb0ef593ull);
     const V4x64U key = LoadU(keys);
     // TODO: find better numbers for v2, v3.
@@ -56,12 +57,11 @@ class HighwayTreeHashState512 {
   }
 
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
+    const V4x64U mask(0xff00ff00ff00ff00ull);
     V4x64U mul0(_mm256_mul_epu32(v0, Permute(v2)));
     V4x64U mul1(_mm256_mul_epu32(v1, Permute(v3)));
     V4x64U mul2(_mm256_mul_epu32(v0 >> 32, v2));
     V4x64U mul3(_mm256_mul_epu32(v1 >> 32, v3));
-
-    const V4x64U mask(0x00ff00ff00ff00ffull);
     v0 ^= packet1 & mask;
     v1 ^= AndNot(mask, packet1);
     v2 ^= packet2 & mask;
@@ -123,17 +123,6 @@ class HighwayTreeHashState512 {
     Update(packet1, packet2);
   }
 
-  INLINE uint64_t Finalize() {
-    // Mix together all lanes.
-    Update(v0, v2);
-    Update(v1, v3);
-    Update(v2, v0);
-    Update(v3, v1);
-
-    // Much faster than Store(v0 + v1) to uint64_t[].
-    return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1, 0));
-  }
-
   static INLINE V4x64U ZipperMerge(const V4x64U& v) {
     // Multiplication mixes/scrambles bytes 0-7 of the 64-bit result to
     // varying degrees. In descending order of goodness, bytes
@@ -150,6 +139,49 @@ class HighwayTreeHashState512 {
     return V4x64U(_mm256_shuffle_epi8(v, V4x64U(hi, lo, hi, lo)));
   }
 
+  INLINE uint64_t Finalize() {
+    // Much faster than Store(v0 + v1) to uint64_t[].
+    return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1, 0));
+  }
+
+  INLINE void UpdateFinalBlock(const uint64_t *packets) {
+    const V4x64U packet1 = LoadU(packets);
+    const V4x64U packet2 = LoadU(packets + 4);
+    Update(packet1, packet2);
+    Update(packet1, packet2);
+    Update(packet1, packet2);
+    Update(packet1, packet2);
+  }
+
+  INLINE void UpdateFinalPacket(const uint64_t *packets, size_t remainder) {
+    // Absorb the length to avoid collisions between messages with different
+    // lengths of trailing 0's.
+    v0 ^= V4x64U(0, 0, 0, remainder);
+    if (remainder == kPacketSize) {
+      UpdatePacket(packets);
+    } else if (remainder > kPacketSize/2) {
+      ALIGNED(uint8_t, 64) final_packet[kPacketSize];
+      memcpy(final_packet, reinterpret_cast<const uint8_t*>(packets), remainder);
+      memset(final_packet + remainder, 0, kPacketSize - remainder);
+      UpdatePacket(reinterpret_cast<const uint64_t*>(final_packet));
+    } else {
+      // It is faster to do 4-rounds of Update in this case.
+      const int num_full_blocks = remainder >> kBlockShift;
+      for (int i = 0; i < num_full_blocks; ++i) {
+        UpdateFinalBlock(packets);
+        packets += kBlockSize / sizeof(uint64_t);
+      }
+      const size_t byte_remainder = remainder & (kBlockSize - 1);
+      if (byte_remainder > 0) {
+        // Final block is padded with 0's.
+        ALIGNED(uint8_t, 64) final_block[kBlockSize] = {0,};
+        memcpy(final_block, reinterpret_cast<const uint8_t*>(packets), byte_remainder);
+        memset(final_block + byte_remainder, 0, kBlockSize - byte_remainder);
+        UpdateFinalBlock(reinterpret_cast<const uint64_t*>(final_block));
+      }
+    }
+  }
+
   void print() {
       v0.print("v0");
       v1.print("v1");
@@ -157,8 +189,6 @@ class HighwayTreeHashState512 {
       v3.print("v3");
   }
 
-  V4x64U init0;
-  V4x64U init1;
   V4x64U v0;
   V4x64U v1;
   V4x64U v2;
@@ -168,45 +198,20 @@ class HighwayTreeHashState512 {
 }  // namespace
 
 uint64_t HighwayTreeHash512(const uint64_t (&key)[4], const uint8_t* bytes,
-                         const uint64_t size) {
+                            const uint64_t size) {
   HighwayTreeHashState512 state(key);
 
-  const size_t remainder = size & (kPacketSize - 1);
-  const size_t truncated_size = size - remainder;
+  size_t num_full_packets = size >> kPacketShift;
+  if ((size & (kPacketSize - 1)) == 0 && num_full_packets > 0) {
+    // The last block is hashed differently, so make sure we still have data to hash.
+    num_full_packets--;
+  }
   const uint64_t* packets = reinterpret_cast<const uint64_t*>(bytes);
-  uint32_t i; //  Used later so declared outside for loop.
-  for (i = 0; i < truncated_size / sizeof(uint64_t); i += kPacketSize / sizeof(uint64_t)) {
-    state.UpdatePacket(packets + i);
+  for (size_t i = 0; i < num_full_packets; ++i) {
+    state.UpdatePacket(packets);
+    packets += kPacketSize / sizeof(uint64_t);
   }
-
-  if (remainder > kPacketSize / 2) {
-      // Do a full twisted round padding with 0's in this case.
-      uint64_t final_packet[kPacketSize / sizeof(uint64_t)] = {0,};
-      memcpy(final_packet, packets + i, remainder);
-      state.UpdatePacket(final_packet);
-  } else if (remainder > 0) {
-      // It is faster to do 4-rounds of Update in this case.
-      const size_t block_remainder = size & (kBlockSize - 1);
-      const size_t stop = (size - block_remainder) / sizeof(uint64_t);
-      for (; i < stop; i += kBlockSize) {
-          const V4x64U packet1 = LoadU(packets + i);
-          const V4x64U packet2 = LoadU(packets + i + 4);
-          state.Update(packet1, packet2);
-          state.Update(packet1, packet2);
-          state.Update(packet1, packet2);
-          state.Update(packet1, packet2);
-      }
-      if (block_remainder > 0) {
-          // Final block padded with 0's.
-          uint64_t final_block[kBlockSize / sizeof(uint64_t)] = {0,};
-          memcpy(final_block, packets + i, block_remainder);
-          const V4x64U packet1 = LoadU(final_block);
-          const V4x64U packet2 = LoadU(final_block + 4);
-          state.Update(packet1, packet2);
-          state.Update(packet1, packet2);
-          state.Update(packet1, packet2);
-          state.Update(packet1, packet2);
-      }
-  }
+  size_t remainder = size - (num_full_packets << kPacketShift);
+  state.UpdateFinalPacket(packets, remainder);
   return state.Finalize();
 }

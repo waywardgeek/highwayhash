@@ -141,9 +141,9 @@ template <class Function1, class Function2>
 static void VerifyEqual(const char* caption, const Function1& hash_function1,
                         const Function2& hash_function2) {
   const int kMaxSize = 128;
-  uint8_t in[kMaxSize] = {0};
+  ALIGNED(uint8_t, 64) in[kMaxSize] = {0};
 
-  const uint64_t key[4] = {0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
+  const ALIGNED(uint64_t, 64) key[4] = {0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
                            0x1716151413121110ULL, 0x1F1E1D1C1B1A1918ULL};
 
   for (int size = 0; size < kMaxSize; ++size) {
@@ -159,10 +159,9 @@ static void VerifyEqual(const char* caption, const Function1& hash_function1,
 }
 
 template <class Function>
-static void Benchmark(const char* caption, const Function& hash_function) {
-  const int kSize = 1024;
-  uint8_t in[kSize];
-  for (int i = 0; i < kSize; ++i) {
+static void Benchmark(const char* caption, const Function& hash_function, const int size) {
+  ALIGNED(uint8_t, 64) in[size];
+  for (int i = 0; i < size; ++i) {
     in[i] = static_cast<uint8_t>(i);
   }
 
@@ -172,12 +171,14 @@ static void Benchmark(const char* caption, const Function& hash_function) {
   uint64_t sum = 1;
   uint64_t minTicks = 99999999999;
   const int kLoops = 50000;
+  //const int kLoops = 1;
   for (int rep = 0; rep < 25; ++rep) {
+  //for (int rep = 0; rep < 1; ++rep) {
     const uint64_t t0 = TimerTicks();
     COMPILER_FENCE;
     for (int loop = 0; loop < kLoops; ++loop) {
       sum <<= 1;
-      const uint64_t hash = hash_function(key, in, kSize);
+      const uint64_t hash = hash_function(key, in, size);
       sum ^= hash;
     }
     const uint64_t t1 = TimerTicks();
@@ -185,24 +186,33 @@ static void Benchmark(const char* caption, const Function& hash_function) {
     minTicks = std::min(minTicks, t1 - t0);
   }
   const double minSec = double(minTicks) / TimerFrequency();
-  const double cyclesPerByte = 3.5E9 * minSec / (kLoops * kSize);
-  const double GBps = kLoops * kSize / minSec * 1E-9;
-  printf("%s %d sum=%lu\t\tGBps=%.2f  c/b=%.2f\n", caption, kSize, sum, GBps,
+  const double cyclesPerByte = 3.5E9 * minSec / (kLoops * size);
+  const double GBps = kLoops * size / minSec * 1E-9;
+  printf("%s %d sum=%lu\t\tGBps=%.2f  c/b=%.2f\n", caption, size, sum, GBps,
          cyclesPerByte);
 }
 
 int main(int argc, char* argv[]) {
-  Benchmark("ScalarSipTreeHash", ScalarSipTreeHash);
-  Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash);
-  Benchmark("ScalarHighwayTreeHash512", ScalarHighwayTreeHash512);
-  Benchmark("SipHash", SipHash);
-  Benchmark("SipTreeHash", SipTreeHash);
-  Benchmark("HighwayTreeHash", HighwayTreeHash);
-  Benchmark("HighwayTreeHash512", HighwayTreeHash512);
+  int size = 1024;
+  if(argc == 2) {
+      size = atoi(argv[1]);
+  }
+  if (argc > 2 || size == 0) {
+      fprintf(stderr, "Usage: sip_hash_main [size]\n");
+      return 1;
+  }
+  Benchmark("ScalarSipTreeHash", ScalarSipTreeHash, size);
+  Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash, size);
+  Benchmark("ScalarHighwayTreeHash512", ScalarHighwayTreeHash512, size);
+  Benchmark("SipHash", SipHash, size);
+  Benchmark("SipTreeHash", SipTreeHash, size);
+  Benchmark("HighwayTreeHash", HighwayTreeHash, size);
+  Benchmark("HighwayTreeHash512", HighwayTreeHash512, size);
 
   VerifySipHash();
   VerifyEqual("SipTree scalar", SipTreeHash, ScalarSipTreeHash);
   VerifyEqual("HighwayTree scalar", HighwayTreeHash, ScalarHighwayTreeHash);
+  VerifyEqual("HighwayTree512 scalar", HighwayTreeHash512, ScalarHighwayTreeHash512);
 
   return 0;
 }
