@@ -72,17 +72,17 @@ class HighwayTreeHashState512 {
   }
 
   inline void Update(const V4x64S& packet1, const V4x64S& packet2) {
-    const V4x64S mask(0xff00ff00ff00ff00ull);
-    V4x64S mul0(Multiply(v0, Permute(v2)));
-    V4x64S mul1(Multiply(v1, Permute(v3)));
-    V4x64S mul2(Multiply(v0 >> 32, v2));
-    V4x64S mul3(Multiply(v1 >> 32, v3));
+    const V4x64S mask(0x5555555555555555ull);
+    V4x64S mul0(Multiply(v0, v2 >> 32));
+    V4x64S mul1(Multiply(v1, v3 >> 32));
+    V4x64S mul2(Multiply(Permute(v0), v2));
+    V4x64S mul3(Multiply(Permute(v1), v3));
     v0 ^= packet1 & mask;
     v1 ^= AndNot(mask, packet1);
     v2 ^= packet2 & mask;
     v3 ^= AndNot(mask, packet2);
-    v0 ^= ZipperMerge(mul1);
-    v1 ^= ZipperMerge(mul0);
+    v0 ^= mul1;
+    v1 ^= mul0;
     v2 ^= ZipperMerge(mul3);
     v3 ^= ZipperMerge(mul2);
   }
@@ -236,6 +236,8 @@ uint64_t ScalarHighwayTreeHash512(const uint64_t (&key)[4], const uint8_t* bytes
     packets += kPacketSize / sizeof(uint64_t);
   }
   size_t remainder = size - (num_full_packets << kPacketShift);
-  state.UpdateFinalPacket(packets, remainder);
+  if (remainder > 0) {
+      state.UpdateFinalPacket(packets, remainder);
+  }
   return state.Finalize();
 }

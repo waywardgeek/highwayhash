@@ -38,22 +38,21 @@ class ScalarHighwayTreeHashState {
   }
 
   INLINE void Update(const uint64_t* packets) {
+    const uint64_t mask32 = 0xFFFFFFFFULL;
+    const uint64_t mask = 0x5555555555555555ull;
     Lanes mul0, mul1;
     for (int lane = 0; lane < kNumLanes; ++lane) {
-      v1[lane] += packets[lane];
-      const uint64_t mask32 = 0xFFFFFFFFULL;
-      v0[lane] |= 0x70000001ULL;
-      const uint64_t mul32 = v0[lane] & mask32;
-      mul0[lane] = mul32 * (v1[lane] & mask32);
-      mul1[lane] = mul32 * (v1[lane] >> 32);
+      mul0[lane] = (v0[lane] & mask32) * (v0[lane] >> 32);
+      mul1[lane] = (v1[lane] & mask32) * (v1[lane] >> 32);
+      v0[lane] ^= packets[lane] & ~mask;
+      v1[lane] ^= packets[lane] & mask;
     }
-
     Lanes merged;
-    ZipperMerge(reinterpret_cast<const uint8_t*>(&mul0),
+    ZipperMerge(reinterpret_cast<const uint8_t*>(&mul1),
                 reinterpret_cast<uint8_t*>(&merged));
     for (int lane = 0; lane < kNumLanes; ++lane) {
-      v0[lane] += merged[lane];
-      v1[lane] += mul1[lane];
+      v0[lane] ^= merged[lane];
+      v1[lane] ^= mul0[lane];
     }
   }
 

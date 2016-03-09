@@ -197,13 +197,13 @@ int main(int argc, char* argv[]) {
   if(argc == 2) {
       size = atoi(argv[1]);
   }
-  if (argc > 2 || size == 0) {
+  if (argc > 2) {
       fprintf(stderr, "Usage: sip_hash_main [size]\n");
       return 1;
   }
   Benchmark("ScalarSipTreeHash", ScalarSipTreeHash, size);
   Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash, size);
-  Benchmark("ScalarHighwayTreeHash512", ScalarHighwayTreeHash512, size);
+  //Benchmark("ScalarHighwayTreeHash512", ScalarHighwayTreeHash512, size);
   Benchmark("SipHash", SipHash, size);
   Benchmark("SipTreeHash", SipTreeHash, size);
   Benchmark("HighwayTreeHash", HighwayTreeHash, size);
