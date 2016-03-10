@@ -43,7 +43,7 @@ class HighwayTreeHashState512 {
     v0 = init0 ^ key;
     v1 = init1;
     v2 = init0 + init1;
-    v3 = init1 ^ init1;
+    v3 = init0 ^ init1;
   }
 
   INLINE V4x64U Permute(const V4x64U& val) {
@@ -141,7 +141,7 @@ class HighwayTreeHashState512 {
 
   INLINE uint64_t Finalize() {
     // Much faster than Store(v0 + v1) to uint64_t[].
-    return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1, 0));
+    return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1 + v2 + v3, 0));
   }
 
   INLINE void UpdateFinalBlock(const uint64_t *packets) {

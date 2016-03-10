@@ -43,7 +43,7 @@ class HighwayTreeHashState512 {
     v0 = init0 ^ key;
     v1 = init1;
     v2 = init0 + init1;
-    v3 = init1 ^ init1;
+    v3 = init0 ^ init1;
   }
 
   INLINE V4x64S Permute(const V4x64S& val) {
@@ -139,7 +139,7 @@ class HighwayTreeHashState512 {
   }
 
   INLINE uint64_t Finalize() {
-    return v0.v_[0] + v1.v_[0];
+    return v0.v_[0] + v1.v_[0] + v2.v_[0] + v3.v_[0];
   }
 
   static INLINE V4x64S ZipperMerge(const V4x64S& val) {
