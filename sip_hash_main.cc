@@ -29,6 +29,7 @@
 #include "scalar_highway_tree_hash.h"
 #include "scalar_highway_tree_hash512.h"
 #include "scalar_sip_tree_hash.h"
+#include "river.h"
 #include "sip_hash.h"
 #include "sip_tree_hash.h"
 #include "vec2.h"
@@ -192,6 +193,40 @@ static void Benchmark(const char* caption, const Function& hash_function, const 
          cyclesPerByte);
 }
 
+static void BenchmarkRiver() {
+  const ALIGNED(uint64_t, 64) key[8] = {
+      0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
+      0x1716151413121110ULL, 0x1F1E1D1C1B1A1918ULL,
+      0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
+      0x1716151413121110ULL, 0x1F1E1D1C1B1A1918ULL
+  };
+
+  River river(key);
+  uint64_t sum = 1;
+  uint64_t minTicks = 99999999999;
+  const int kLoops = 50000;
+  //const int kLoops = 1;
+  for (int rep = 0; rep < 25; ++rep) {
+  //for (int rep = 0; rep < 1; ++rep) {
+    const uint64_t t0 = TimerTicks();
+    COMPILER_FENCE;
+    for (uint32_t loop = 0; loop < kLoops; ++loop) {
+      const uint64_t* data = river.GeneratePseudoRandomData();
+      //for (uint32_t j = 0; j < River::kPacketSize / sizeof(uint64_t); ++j) {
+          sum <<= 1;
+          sum ^= data[(River::kPacketSize / sizeof(uint64_t)) - 1];
+      //}
+    }
+    const uint64_t t1 = TimerTicks();
+    COMPILER_FENCE;
+    minTicks = std::min(minTicks, t1 - t0);
+  }
+  const double minSec = double(minTicks) / TimerFrequency();
+  const double cyclesPerByte = 3.5E9 * minSec / (kLoops * River::kPacketSize);
+  const double GBps = kLoops * River::kPacketSize / minSec * 1E-9;
+  printf("River sum=%lu\t\tGBps=%.2f  c/b=%.2f\n", sum, GBps, cyclesPerByte);
+}
+
 int main(int argc, char* argv[]) {
   int size = 1024;
   if(argc == 2) {
@@ -201,6 +236,7 @@ int main(int argc, char* argv[]) {
       fprintf(stderr, "Usage: sip_hash_main [size]\n");
       return 1;
   }
+  BenchmarkRiver();
   Benchmark("ScalarSipTreeHash", ScalarSipTreeHash, size);
   Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash, size);
   //Benchmark("ScalarHighwayTreeHash512", ScalarHighwayTreeHash512, size);
