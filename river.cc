@@ -50,8 +50,8 @@ class RiverImpl {
     v1 ^= mul0;
     v2 ^= ZipperMerge(mul3);
     v3 ^= ZipperMerge(mul2);
-    *out1 ^= v2;
-    *out2 ^= v3;
+    *out1 += v2;
+    *out2 += v3;
   }
 
   INLINE V4x64U Permute(const V4x64U& val) {
