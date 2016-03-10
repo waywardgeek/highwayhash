@@ -44,8 +44,8 @@ class ScalarHighwayTreeHashState {
     for (int lane = 0; lane < kNumLanes; ++lane) {
       mul0[lane] = (v0[lane] & mask32) * (v0[lane] >> 32);
       mul1[lane] = (v1[lane] & mask32) * (v1[lane] >> 32);
-      v0[lane] ^= packets[lane] & ~mask;
-      v1[lane] ^= packets[lane] & mask;
+      v0[lane] ^= packets[lane] & mask;
+      v1[lane] ^= packets[lane] & ~mask;
     }
     Lanes merged;
     ZipperMerge(reinterpret_cast<const uint8_t*>(&mul1),
