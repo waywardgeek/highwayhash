@@ -40,10 +40,10 @@ class HighwayTreeHashState512 {
         0xc0acf169b5f18a8cull, 0x3bd39e10cb0ef593ull);
     const V4x64U key = LoadU(keys);
     // TODO: find better numbers for v2, v3.
-    v0 = init0;
-    v1 = key ^ init1;
-    v2 = init0;
-    v3 = init1;
+    v0 = init0 ^ key;
+    v1 = init1;
+    v2 = init0 + init1;
+    v3 = init1 ^ init1;
   }
 
   INLINE V4x64U Permute(const V4x64U& val) {
