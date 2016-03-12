@@ -49,7 +49,6 @@ class HighwayTreeHashState512 {
   INLINE V4x64S Permute(const V4x64S& val) {
     // For complete mixing, we need to swap the upper and lower 128-bit halves;
     // we also swap all 32-bit halves.
-    // Slightly better to permute v0 than v1; it will be added to v1.
     V4x64S permuted;
     uint64_t v = val.v_[0];
     permuted.v_[2] = v >> 32 | v << 32;
@@ -73,8 +72,8 @@ class HighwayTreeHashState512 {
 
   inline void Update(const V4x64S& packet1, const V4x64S& packet2) {
     const V4x64S mask(0x5555555555555555ull);
-    V4x64S mul0(Multiply(v0, v2 >> 32));
-    V4x64S mul1(Multiply(v1, v3 >> 32));
+    V4x64S mul0(Multiply(v0, Permute(v2)));
+    V4x64S mul1(Multiply(v1, Permute(v3)));
     V4x64S mul2(Multiply(v0 >> 32, v2));
     V4x64S mul3(Multiply(v1 >> 32, v3));
     v0 += packet1 & mask;
@@ -143,6 +142,8 @@ class HighwayTreeHashState512 {
   }
 
   INLINE uint64_t Finalize() {
+    // To make up for the 1-round lag in multiplication propagation
+    Update(Permute(v2), Permute(v3));
     return v0.v_[0] + v1.v_[0] + v2.v_[0] + v3.v_[0];
   }
 
@@ -175,9 +176,9 @@ class HighwayTreeHashState512 {
     const V4x64S packet1 = LoadU(packets);
     const V4x64S packet2 = LoadU(packets + 4);
     Update(packet1, packet2);
+    Update(packet2, packet1);
     Update(packet1, packet2);
-    Update(packet1, packet2);
-    Update(packet1, packet2);
+    Update(packet2, packet1);
   }
 
   INLINE void UpdateFinalPacket(const uint64_t *packets, size_t remainder) {
