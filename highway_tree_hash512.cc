@@ -58,18 +58,26 @@ class HighwayTreeHashState512 {
 
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
     const V4x64U mask(0x5555555555555555ull);
+    V4x64U prevV0 = v0;
+    V4x64U prevV1 = v1;
+    V4x64U prevV2 = v2;
+    V4x64U prevV3 = v3;
     V4x64U mul0(_mm256_mul_epu32(v0, v2 >> 32));
     V4x64U mul1(_mm256_mul_epu32(v1, v3 >> 32));
-    V4x64U mul2(_mm256_mul_epu32(Permute(v0), v2));
-    V4x64U mul3(_mm256_mul_epu32(Permute(v1), v3));
-    v0 ^= packet1 & mask;
-    v1 ^= AndNot(mask, packet1);
-    v2 ^= packet2 & mask;
-    v3 ^= AndNot(mask, packet2);
-    v0 ^= mul1;
-    v1 ^= mul0;
-    v2 ^= ZipperMerge(mul3);
-    v3 ^= ZipperMerge(mul2);
+    V4x64U mul2(_mm256_mul_epu32(v0 >> 32, v2));
+    V4x64U mul3(_mm256_mul_epu32(v1 >> 32, v3));
+    v0 += packet1 & mask;
+    v1 += AndNot(mask, packet1);
+    v2 += packet2 & mask;
+    v3 += AndNot(mask, packet2);
+    v0 += ZipperMerge(prevV1);
+    v1 += ZipperMerge(prevV0);
+    v2 += ZipperMerge(prevV3);
+    v3 += ZipperMerge(prevV2);
+    v0 ^= mul3;
+    v1 ^= mul2;
+    v2 ^= mul1;
+    v3 ^= mul0;
   }
 
   INLINE void UpdatePacket(const uint64_t *packets) {
