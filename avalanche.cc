@@ -5,8 +5,8 @@
 #include "highway_tree_hash.h"
 #include "highway_tree_hash512.h"
 
-void printStats(uint32_t in_bytes, uint32_t hashbits, uint32_t inbits, uint32_t *counts) {
-  printf("*********************** Input size: %u\n", in_bytes);
+void printStats(uint32_t in_bytes, uint32_t hashbits, uint32_t inbits, uint32_t offset, uint32_t *counts) {
+  printf("*********************** Input size: %u, In bits: %u, Offset: %u\n", in_bytes, inbits, offset*8);
   for (uint32_t inpos = 0; inpos < inbits; inpos++) {
     double total_bias = 0.0;
     float max_bias = 0.0f;
@@ -35,25 +35,28 @@ int main(int argc, char* argv[]) {
   uint32_t sizes[3] = {3, 64, 512};
   for (uint32_t i = 0; i < 3; ++i) {
     uint32_t in_bytes = sizes[i];
-    memset(counts, 0, inbits * hashbits * sizeof(uint32_t));
-    for (uint32_t inval = 0; inval < 1 << inbits; ++inval) {
-      uint64_t hash1 = HighwayTreeHash512(key, in, in_bytes);
-      for (uint32_t inpos = 0; inpos < inbits; ++inpos) {
-         // Only check for 1->0 transitions
-         if (inval & (1 << inpos)) {
-           uint32_t value = inval ^ (1 << inpos);
-           memcpy(in, &value, sizeof(uint32_t));
-           uint64_t hash2 = HighwayTreeHash512(key, in, in_bytes);
-           for (uint32_t hashpos = 0; hashpos < hashbits; ++hashpos) {
-             uint32_t mask = 1 << hashpos;
-             if ((hash2 & mask) != (hash1 & mask)) {
-               counts[inpos*hashbits + hashpos]++;
+    for (uint32_t offset = 0; offset < in_bytes; ++offset) {
+      memset(counts, 0, inbits * hashbits * sizeof(uint32_t));
+      memset(in, 0, sizeof(in));
+      for (uint32_t inval = 0; inval < 1 << inbits; ++inval) {
+        uint64_t hash1 = HighwayTreeHash512(key, in, in_bytes);
+        for (uint32_t inpos = 0; inpos < inbits; ++inpos) {
+           // Only check for 1->0 transitions
+           if (inval & (1 << inpos)) {
+             uint32_t value = inval ^ (1 << inpos);
+             memcpy(in + offset, &value, sizeof(uint32_t));
+             uint64_t hash2 = HighwayTreeHash512(key, in, in_bytes);
+             for (uint32_t hashpos = 0; hashpos < hashbits; ++hashpos) {
+               uint32_t mask = 1 << hashpos;
+               if ((hash2 & mask) != (hash1 & mask)) {
+                 counts[inpos*hashbits + hashpos]++;
+               }
              }
            }
-         }
+        }
       }
+      printStats(in_bytes, hashbits, inbits, offset, counts);
     }
-    printStats(in_bytes, hashbits, inbits, counts);
   }
   return 0;
 }
