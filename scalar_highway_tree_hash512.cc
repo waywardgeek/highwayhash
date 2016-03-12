@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "highway_tree_hash512.h"
+#include "scalar_highway_tree_hash512.h"
 
 #include <cstring>  // memcpy
 #include <stdio.h>
