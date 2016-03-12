@@ -189,7 +189,7 @@ static void Benchmark(const char* caption, const Function& hash_function, const 
   const double minSec = double(minTicks) / TimerFrequency();
   const double cyclesPerByte = 3.5E9 * minSec / (kLoops * size);
   const double GBps = kLoops * size / minSec * 1E-9;
-  printf("%s %d sum=%lu\t\tGBps=%.2f  c/b=%.2f\n", caption, size, sum, GBps,
+  printf("%-28s %5d sum=0x%016lx\tGBps=%6.2f  c/b=%.2f\n", caption, size, sum, GBps,
          cyclesPerByte);
 }
 
@@ -224,7 +224,8 @@ static void BenchmarkRiver() {
   const double minSec = double(minTicks) / TimerFrequency();
   const double cyclesPerByte = 3.5E9 * minSec / (kLoops * River::kPacketSize);
   const double GBps = kLoops * River::kPacketSize / minSec * 1E-9;
-  printf("River sum=%lu\t\tGBps=%.2f  c/b=%.2f\n", sum, GBps, cyclesPerByte);
+  printf("%-28s       sum=0x%016lx\tGBps=%6.2f  c/b=%.2f\n", "River", sum,
+      GBps, cyclesPerByte);
 }
 
 int main(int argc, char* argv[]) {
@@ -236,7 +237,6 @@ int main(int argc, char* argv[]) {
       fprintf(stderr, "Usage: sip_hash_main [size]\n");
       return 1;
   }
-  BenchmarkRiver();
   Benchmark("ScalarSipTreeHash", ScalarSipTreeHash, size);
   Benchmark("ScalarHighwayTreeHash", ScalarHighwayTreeHash, size);
   //Benchmark("ScalarHighwayTreeHash512", ScalarHighwayTreeHash512, size);
@@ -244,6 +244,7 @@ int main(int argc, char* argv[]) {
   Benchmark("SipTreeHash", SipTreeHash, size);
   Benchmark("HighwayTreeHash", HighwayTreeHash, size);
   Benchmark("HighwayTreeHash512", HighwayTreeHash512, size);
+  BenchmarkRiver();
 
   VerifySipHash();
   VerifyEqual("SipTree scalar", SipTreeHash, ScalarSipTreeHash);
