@@ -54,6 +54,7 @@ def x(a,b,c):
   }
 
   INLINE void Update(const V4x64U& packet) {
+    /*
     const V4x64U mask(0x5555555555555555ull);
     V4x64U mul0(_mm256_mul_epu32(v0, v0 >> 32));
     V4x64U mul1(_mm256_mul_epu32(v1, v1 >> 32));
@@ -61,6 +62,13 @@ def x(a,b,c):
     v1 ^= AndNot(mask, packet);
     v0 ^= ZipperMerge(mul1);
     v1 ^= mul0;
+    */
+    v1 += packet;
+    v0 |= V4x64U(0x0000000070000001ULL);
+    V4x64U mul0(_mm256_mul_epu32(v0, v1));
+    V4x64U mul1(_mm256_mul_epu32(v0, v1 >> 32));
+    v0 += ZipperMerge(mul0);
+    v1 += mul1;
   }
 
   INLINE uint64_t Finalize() {
