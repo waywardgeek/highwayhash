@@ -65,8 +65,8 @@ class HighwayTreeHashState512 {
     v1 += AndNot(mask, packet1);
     v2 += packet2 & mask;
     v3 += AndNot(mask, packet2);
-    v0 += ZipperMerge(v3);
-    v1 += ZipperMerge(v0);
+    v0 += v3;
+    v1 += v0;
     v2 += ZipperMerge(v1);
     v3 += ZipperMerge(v2);
     v0 ^= mul3;

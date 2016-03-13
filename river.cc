@@ -40,6 +40,8 @@ class RiverImpl {
   }
 
   inline void Update(V4x64U *out1, V4x64U *out2) {
+    v0 += *out1;
+    v1 += *out2;
     V4x64U mul0(_mm256_mul_epu32(v0, v2 >> 32));
     V4x64U mul1(_mm256_mul_epu32(v1, v3 >> 32));
     V4x64U mul2(_mm256_mul_epu32(Permute(v0), v2));
