@@ -33,8 +33,8 @@ sip_tree_hash: $(FILES) $(HEADERS)
 river: river.cc river.h river_main.cc
 	$(CC) -Wall -std=c++11 -O3 -march=native river.cc river_main.cc -o river
 
-avalanche: avalanche.cc gray.h highway_tree_hash512.cc highway_tree_hash512.h
-	$(CC) -Wall -std=c++11 -O3 -march=native avalanche.cc highway_tree_hash512.cc -o avalanche
+avalanche: avalanche.cc gray.h highway_tree_hash512.cc highway_tree_hash512.h highway_tree_hash.cc highway_tree_hash.h
+	$(CC) -Wall -std=c++11 -O3 -march=native avalanche.cc highway_tree_hash.cc highway_tree_hash512.cc -o avalanche
 
 clean:
 	rm -f sip_tree_hash river avalanche

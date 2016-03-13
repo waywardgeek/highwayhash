@@ -11,7 +11,7 @@ void printStats(uint32_t in_bytes, uint32_t hashbits, uint32_t inbits, uint32_t 
     double total_bias = 0.0;
     float max_bias = 0.0f;
     for (uint32_t hashpos = 0; hashpos < hashbits; ++hashpos) {
-      float bias = 100.0f*(0.5f -
+      float bias = 200.0f*(0.5f -
           counts[inpos*hashbits + hashpos]/float(1 << (inbits - 1)));
       if(bias < 0.0f) {
           bias = -bias;
@@ -27,25 +27,29 @@ void printStats(uint32_t in_bytes, uint32_t hashbits, uint32_t inbits, uint32_t 
 }
 
 int main(int argc, char* argv[]) {
+  ALIGNED(uint64_t, 64) key[4] = {0,};
+  ALIGNED(uint8_t, 64) in[512] = {0,};
   const size_t hashbits = 64;
   const size_t inbits = 20;
   uint32_t *counts = new uint32_t[inbits * hashbits];
-  ALIGNED(uint64_t, 64) key[4] = {0,};
-  ALIGNED(uint8_t, 64) in[512] = {0,};
-  uint32_t sizes[3] = {3, 64, 512};
+  //uint32_t sizes[3] = {3, 64, 512};
+  uint32_t sizes[3] = {3, 16, 32};
   for (uint32_t i = 0; i < 3; ++i) {
     uint32_t in_bytes = sizes[i];
     for (uint32_t offset = 0; offset < in_bytes; ++offset) {
       memset(counts, 0, inbits * hashbits * sizeof(uint32_t));
-      memset(in, 0, sizeof(in));
       for (uint32_t inval = 0; inval < 1 << inbits; ++inval) {
-        uint64_t hash1 = HighwayTreeHash512(key, in, in_bytes);
+        memset(in, 0, sizeof(in));
+        memcpy(in + offset, &inval, sizeof(uint32_t));
+        //uint64_t hash1 = HighwayTreeHash512(key, in, in_bytes + offset);
+        int64_t hash1 = HighwayTreeHash(key, in, in_bytes + offset);
         for (uint32_t inpos = 0; inpos < inbits; ++inpos) {
            // Only check for 1->0 transitions
            if (inval & (1 << inpos)) {
              uint32_t value = inval ^ (1 << inpos);
              memcpy(in + offset, &value, sizeof(uint32_t));
-             uint64_t hash2 = HighwayTreeHash512(key, in, in_bytes);
+             //uint64_t hash2 = HighwayTreeHash512(key, in, in_bytes + offset);
+             uint64_t hash2 = HighwayTreeHash(key, in, in_bytes + offset);
              for (uint32_t hashpos = 0; hashpos < hashbits; ++hashpos) {
                uint32_t mask = 1 << hashpos;
                if ((hash2 & mask) != (hash1 & mask)) {
