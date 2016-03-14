@@ -52,8 +52,8 @@ class RiverImpl {
     v3 += ZipperMerge(v1);
     v0 ^= mul1;
     v1 ^= mul0;
-    v2 ^= mul2;
-    v3 ^= mul3;
+    v2 ^= mul3;
+    v3 ^= mul2;
     *out1 += v2;
     *out2 += v3;
   }
@@ -92,6 +92,7 @@ class RiverImpl {
     Update(packets + 10, packets + 11);
     Update(packets + 12, packets + 13);
     Update(packets + 14, packets + 15);
+    /* These extra calls to Update do not seem to be required.
     Update(packets + 8,  packets + 9);
     Update(packets + 2,  packets + 3);
     Update(packets + 12, packets + 13);
@@ -100,6 +101,7 @@ class RiverImpl {
     Update(packets + 10, packets + 11);
     Update(packets + 4,  packets + 5);
     Update(packets + 14, packets + 15);
+    */
   }
 
   void print() {
