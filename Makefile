@@ -36,8 +36,8 @@ river: river.cc river.h river_main.cc
 avalanche: avalanche.cc highway_tree_hash512.cc highway_tree_hash512.h highway_tree_hash.cc highway_tree_hash.h
 	$(CC) -Wall -std=c++11 -O3 -march=native avalanche.cc highway_tree_hash.cc highway_tree_hash512.cc -o avalanche
 
-gendata: gendata.cc highway_tree_hash512.cc highway_tree_hash512.h
-	$(CC) -Wall -std=c++11 -O3 -march=native gendata.cc highway_tree_hash512.cc -o gendata
+gendata: gendata.cc river.cc river.h highway_tree_hash512.cc highway_tree_hash512.h
+	$(CC) -Wall -std=c++11 -O3 -march=native gendata.cc river.cc highway_tree_hash512.cc -o gendata
 
 clean:
 	rm -f sip_tree_hash river avalanche gendata

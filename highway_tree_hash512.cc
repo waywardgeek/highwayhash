@@ -45,15 +45,6 @@ class HighwayTreeHashState512 {
     v3 = init0 ^ init1;
   }
 
-  INLINE V4x64U Permute(const V4x64U& val) {
-    // For complete mixing, we need to swap the upper and lower 128-bit halves;
-    // we also swap all 32-bit halves.
-    const V4x64U indices(0x0000000200000003ull, 0x0000000000000001ull,
-                         0x0000000600000007ull, 0x0000000400000005ull);
-    V4x64U permuted(_mm256_permutevar8x32_epi32(val, indices));
-    return permuted;
-  }
-
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
     V4x64U mul0(_mm256_mul_epu32(v0, Permute(v2)));
     V4x64U mul1(_mm256_mul_epu32(v1, Permute(v3)));
@@ -123,6 +114,15 @@ class HighwayTreeHashState512 {
     packet1 = LoadU(packets + 14*4);
     packet2 = LoadU(packets + 15*4);
     Update(packet1, packet2);
+  }
+
+  INLINE V4x64U Permute(const V4x64U& val) {
+    // For complete mixing, we need to swap the upper and lower 128-bit halves;
+    // we also swap all 32-bit halves.
+    const V4x64U indices(0x0000000200000003ull, 0x0000000000000001ull,
+                         0x0000000600000007ull, 0x0000000400000005ull);
+    V4x64U permuted(_mm256_permutevar8x32_epi32(val, indices));
+    return permuted;
   }
 
   static INLINE V4x64U ZipperMerge(const V4x64U& v) {

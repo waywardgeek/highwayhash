@@ -33,8 +33,8 @@ class RiverImpl {
     key0 = LoadU(key);
     key1 = LoadU(key + 4);
     // TODO: find better numbers for v2, v3.
-    v0 = init0;
-    v1 = init1;
+    v0 = init0 + key0;
+    v1 = init1 ^ key1;
     v2 = init0 + init1;
     v3 = init0 ^ init1;
   }
@@ -42,14 +42,18 @@ class RiverImpl {
   inline void Update(V4x64U *out1, V4x64U *out2) {
     v0 += *out1;
     v1 += *out2;
-    V4x64U mul0(_mm256_mul_epu32(v0, v2 >> 32));
-    V4x64U mul1(_mm256_mul_epu32(v1, v3 >> 32));
+    V4x64U mul0(_mm256_mul_epu32(v0, Permute(v2)));
+    V4x64U mul1(_mm256_mul_epu32(v1, Permute(v3)));
     V4x64U mul2(_mm256_mul_epu32(Permute(v0), v2));
     V4x64U mul3(_mm256_mul_epu32(Permute(v1), v3));
-    v0 ^= ZipperMerge(mul1);
-    v1 ^= ZipperMerge(mul0);
-    v2 ^= ZipperMerge(mul3);
-    v3 ^= ZipperMerge(mul2);
+    v0 ^= ZipperMerge(v2) + key0;
+    v1 ^= ZipperMerge(v3) + key1;
+    v2 += ZipperMerge(v0);
+    v3 += ZipperMerge(v1);
+    v0 ^= mul1;
+    v1 ^= mul0;
+    v2 ^= mul2;
+    v3 ^= mul3;
     *out1 += v2;
     *out2 += v3;
   }
@@ -59,7 +63,6 @@ class RiverImpl {
     // we also swap all 32-bit halves.
     const V4x64U indices(0x0000000200000003ull, 0x0000000000000001ull,
                          0x0000000600000007ull, 0x0000000400000005ull);
-    // Slightly better to permute v0 than v1; it will be added to v1.
     V4x64U permuted(_mm256_permutevar8x32_epi32(val, indices));
     return permuted;
   }
@@ -80,7 +83,7 @@ class RiverImpl {
     return V4x64U(_mm256_shuffle_epi8(v, V4x64U(hi, lo, hi, lo)));
   }
 
-  INLINE const uint64_t *UpdatePacket() {
+  INLINE void UpdatePacket() {
     Update(packets + 0,  packets + 1);
     Update(packets + 2,  packets + 3);
     Update(packets + 4,  packets + 5);
@@ -97,7 +100,6 @@ class RiverImpl {
     Update(packets + 10, packets + 11);
     Update(packets + 4,  packets + 5);
     Update(packets + 14, packets + 15);
-    return reinterpret_cast<const uint64_t*>(packets);
   }
 
   void print() {
@@ -113,12 +115,12 @@ class RiverImpl {
      return reinterpret_cast<const uint64_t*>(packets);
   }
 
-  V4x64U key0;
-  V4x64U key1;
   V4x64U v0;
   V4x64U v1;
   V4x64U v2;
   V4x64U v3;
+  V4x64U key0;
+  V4x64U key1;
   V4x64U packets[16];
 };  // class RiverImpl
 
