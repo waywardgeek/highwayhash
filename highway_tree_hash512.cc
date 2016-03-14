@@ -56,23 +56,23 @@ class HighwayTreeHashState512 {
   }
 
   inline void Update(const V4x64U& packet1, const V4x64U& packet2) {
-    const V4x64U mask(0x5555555555555555ull);
     V4x64U mul0(_mm256_mul_epu32(v0, Permute(v2)));
     V4x64U mul1(_mm256_mul_epu32(v1, Permute(v3)));
-    V4x64U mul2(_mm256_mul_epu32(v0 >> 32, v2));
-    V4x64U mul3(_mm256_mul_epu32(v1 >> 32, v3));
+    V4x64U mul2(_mm256_mul_epu32(Permute(v0), v2));
+    V4x64U mul3(_mm256_mul_epu32(Permute(v1), v3));
+    const V4x64U mask(0x5555555555555555ull);
     v0 += packet1 & mask;
     v1 += AndNot(mask, packet1);
     v2 += packet2 & mask;
     v3 += AndNot(mask, packet2);
-    v0 += v3;
-    v1 += v0;
-    v2 += ZipperMerge(v1);
-    v3 += ZipperMerge(v2);
-    v0 ^= mul3;
-    v1 ^= mul2;
-    v2 ^= mul1;
-    v3 ^= mul0;
+    v0 += ZipperMerge(v2);
+    v1 += ZipperMerge(v3);
+    v2 += ZipperMerge(v0);
+    v3 += ZipperMerge(v1);
+    v0 ^= (mul1);
+    v1 ^= (mul0);
+    v2 ^= (mul2);
+    v3 ^= (mul3);
   }
 
   INLINE void UpdatePacket(const uint64_t *packets) {
@@ -144,6 +144,7 @@ class HighwayTreeHashState512 {
 
   INLINE uint64_t Finalize() {
     // To make up for the 1-round lag in multiplication propagation
+    Update(Permute(v0), Permute(v1));
     Update(Permute(v2), Permute(v3));
     // Much faster than Store(v0 + v1) to uint64_t[].
     return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1 + v2 + v3, 0));
