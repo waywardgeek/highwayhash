@@ -26,8 +26,8 @@
 // "bytes" is the data to hash (possibly unaligned).
 // "size" is the number of bytes to hash; exactly that many bytes are read.
 //
-// Returns a 64-bit hash of the given data bytes.
-uint64_t HighwayTreeHash512(const uint64_t (&key)[4], const uint8_t* bytes,
-                         const uint64_t size);
+// Returns a 512-bit hash of the given data bytes.
+void HighwayTreeHash512(const uint64_t (&key)[8], const uint8_t* bytes,
+                        const uint64_t size, uint64_t out[8]);
 
 #endif  // #ifndef HIGHWAYHASH_HIGHWAY_TREE_HASH512_H_

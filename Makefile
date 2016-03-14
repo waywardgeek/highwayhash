@@ -25,7 +25,7 @@ vec.h \
 vec2.h \
 vec_scalar.h
 
-all: sip_tree_hash river avalanche
+all: sip_tree_hash river avalanche gendata
 
 sip_tree_hash: $(FILES) $(HEADERS)
 	$(CC) -Wall -std=c++11 -O3 -march=native $(FILES) -o sip_tree_hash
@@ -33,8 +33,11 @@ sip_tree_hash: $(FILES) $(HEADERS)
 river: river.cc river.h river_main.cc
 	$(CC) -Wall -std=c++11 -O3 -march=native river.cc river_main.cc -o river
 
-avalanche: avalanche.cc gray.h highway_tree_hash512.cc highway_tree_hash512.h highway_tree_hash.cc highway_tree_hash.h
+avalanche: avalanche.cc highway_tree_hash512.cc highway_tree_hash512.h highway_tree_hash.cc highway_tree_hash.h
 	$(CC) -Wall -std=c++11 -O3 -march=native avalanche.cc highway_tree_hash.cc highway_tree_hash512.cc -o avalanche
 
+gendata: gendata.cc highway_tree_hash512.cc highway_tree_hash512.h
+	$(CC) -Wall -std=c++11 -O3 -march=native gendata.cc highway_tree_hash512.cc -o gendata
+
 clean:
-	rm -f sip_tree_hash river avalanche
+	rm -f sip_tree_hash river avalanche gendata

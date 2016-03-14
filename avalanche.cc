@@ -27,9 +27,11 @@ void printStats(uint32_t in_bytes, uint32_t hashbits, uint32_t inbits, uint32_t 
 }
 
 int main(int argc, char* argv[]) {
-  ALIGNED(uint64_t, 64) key[4] = {0,};
+  ALIGNED(uint64_t, 64) key[8] = {0,};
+  //ALIGNED(uint64_t, 64) key[4] = {0,};
   ALIGNED(uint8_t, 64) in[512] = {0,};
-  const size_t hashbits = 64;
+  const size_t hashbits = 512;
+  //const size_t hashbits = 64;
   const size_t inbits = 20;
   uint32_t *counts = new uint32_t[inbits * hashbits];
   uint32_t sizes[3] = {3, 64, 512};
@@ -41,18 +43,22 @@ int main(int argc, char* argv[]) {
       for (uint32_t inval = 0; inval < 1 << inbits; ++inval) {
         memset(in, 0, sizeof(in));
         memcpy(in + offset, &inval, sizeof(uint32_t));
-        uint64_t hash1 = HighwayTreeHash512(key, in, in_bytes + offset);
+        ALIGNED(uint64_t, 64) hash1[8];
+        HighwayTreeHash512(key, in, in_bytes + offset, hash1);
         //uint64_t hash1 = HighwayTreeHash(key, in, in_bytes + offset);
         for (uint32_t inpos = 0; inpos < inbits; ++inpos) {
            // Only check for 1->0 transitions
            if (inval & (1 << inpos)) {
              uint32_t value = inval ^ (1 << inpos);
              memcpy(in + offset, &value, sizeof(uint32_t));
-             uint64_t hash2 = HighwayTreeHash512(key, in, in_bytes + offset);
+             ALIGNED(uint64_t, 64) hash2[8];
+             HighwayTreeHash512(key, in, in_bytes + offset, hash2);
              //uint64_t hash2 = HighwayTreeHash(key, in, in_bytes + offset);
              for (uint32_t hashpos = 0; hashpos < hashbits; ++hashpos) {
-               uint32_t mask = 1 << hashpos;
-               if ((hash2 & mask) != (hash1 & mask)) {
+               uint32_t index = hashpos/64;
+               uint32_t mask = 1 << (hashpos % 64);
+               if ((hash2[index] & mask) != (hash1[index] & mask)) {
+               //if ((hash2 & mask) != (hash1 & mask)) {
                  counts[inpos*hashbits + hashpos]++;
                }
              }

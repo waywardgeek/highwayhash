@@ -25,7 +25,6 @@ namespace {
 // Four (2 x 64-bit) hash states are updated in parallel by injecting
 // four 64-bit packets per Update(). Finalize() combines the four states into
 // one final 64-bit digest.
-const int kNumLanes = 4;
 const int kBlockShift = 6;
 const int kBlockSize = 1 << kBlockShift;  // 64
 const int kPacketShift = 9;
@@ -33,7 +32,7 @@ const int kPacketSize = 1 << kPacketShift;  // 512
 
 class HighwayTreeHashState512 {
  public:
-  explicit INLINE HighwayTreeHashState512(const uint64_t (&keys)[kNumLanes]) {
+  explicit INLINE HighwayTreeHashState512(const uint64_t (&keys)[8]) {
     const V4x64U init0(0x243f6a8885a308d3ull, 0x13198a2e03707344ull,
         0xa4093822299f31d0ull, 0xdbe6d5d5fe4cce2full);
     const V4x64U init1(0x452821e638d01377ull, 0xbe5466cf34e90c6cull,
@@ -69,10 +68,10 @@ class HighwayTreeHashState512 {
     v1 += ZipperMerge(v3);
     v2 += ZipperMerge(v0);
     v3 += ZipperMerge(v1);
-    v0 ^= (mul1);
-    v1 ^= (mul0);
-    v2 ^= (mul2);
-    v3 ^= (mul3);
+    v0 ^= mul1;
+    v1 ^= mul0;
+    v2 ^= mul2;
+    v3 ^= mul3;
   }
 
   INLINE void UpdatePacket(const uint64_t *packets) {
@@ -142,12 +141,15 @@ class HighwayTreeHashState512 {
     return V4x64U(_mm256_shuffle_epi8(v, V4x64U(hi, lo, hi, lo)));
   }
 
-  INLINE uint64_t Finalize() {
+  INLINE void Finalize(uint64_t out[8]) {
     // To make up for the 1-round lag in multiplication propagation
     Update(Permute(v0), Permute(v1));
     Update(Permute(v2), Permute(v3));
+    V4x64U t1 = v0 + v1;
+    V4x64U t2 = v2 + v3;
     // Much faster than Store(v0 + v1) to uint64_t[].
-    return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1 + v2 + v3, 0));
+    memcpy(out, &t1, 32);
+    memcpy(out + 4, &t2, 32);
   }
 
   INLINE void UpdateFinalBlock(const uint64_t *packets) {
@@ -203,8 +205,8 @@ class HighwayTreeHashState512 {
 
 }  // namespace
 
-uint64_t HighwayTreeHash512(const uint64_t (&key)[4], const uint8_t* bytes,
-                            const uint64_t size) {
+void HighwayTreeHash512(const uint64_t (&key)[8], const uint8_t* bytes,
+                        const uint64_t size, uint64_t out[8]) {
   HighwayTreeHashState512 state(key);
 
   size_t num_full_packets = size >> kPacketShift;
@@ -221,5 +223,5 @@ uint64_t HighwayTreeHash512(const uint64_t (&key)[4], const uint8_t* bytes,
   if (remainder > 0) {
       state.UpdateFinalPacket(packets, remainder);
   }
-  return state.Finalize();
+  state.Finalize(out);
 }
