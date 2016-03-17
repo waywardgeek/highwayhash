@@ -51,18 +51,18 @@ def x(a,b,c):
     const V4x64U key = LoadU(keys);
     v0 = key ^ init0;
     v1 = key ^ init1;
+    mul0 = init0 + init0;
+    mul1 = init1 ^ init0;
   }
 
   INLINE void Update(const V4x64U& packet) {
-    const V4x64U mask(0x5555555555555555ull);
-    v0 += mask & packet;
-    v1 += AndNot(mask, packet);
-    V4x64U mul0(_mm256_mul_epu32(v0, v0 >> 32));
-    V4x64U mul1(_mm256_mul_epu32(v1, v1 >> 32));
+    v1 += packet;
+    v1 += mul0;
+    mul0 ^= V4x64U(_mm256_mul_epu32(v0, v1 >> 32));
+    v0 += mul1;
+    mul1 ^= V4x64U(_mm256_mul_epu32(v1, v0 >> 32));
     v0 += ZipperMerge(v1);
     v1 += ZipperMerge(v0);
-    v0 ^= mul1;
-    v1 ^= mul0;
 
     /*
     v1 += packet;
@@ -82,7 +82,7 @@ def x(a,b,c):
     PermuteAndUpdate();
 
     // Much faster than Store(v0 + v1) to uint64_t[].
-    return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1, 0));
+    return _mm_cvtsi128_si64(_mm256_extracti128_si256(v0 + v1 + mul0 + mul1, 0));
   }
 
  private:
@@ -114,6 +114,8 @@ def x(a,b,c):
 
   V4x64U v0;
   V4x64U v1;
+  V4x64U mul0;
+  V4x64U mul1;
 };
 
 // Returns 32-byte packet by loading the remaining 0..31 bytes, storing

@@ -30,30 +30,34 @@ class RiverImpl {
         0xa4093822299f31d0ull, 0xdbe6d5d5fe4cce2full);
     const V4x64U init1(0x452821e638d01377ull, 0xbe5466cf34e90c6cull,
         0xc0acf169b5f18a8cull, 0x3bd39e10cb0ef593ull);
-    key0 = LoadU(key);
-    key1 = LoadU(key + 4);
-    // TODO: find better numbers for v2, v3.
+    V4x64U key0 = LoadU(key);
+    V4x64U key1 = LoadU(key + 4);
+    // TODO: find better constants.
     v0 = init0 + key0;
     v1 = init1 ^ key1;
     v2 = init0 + init1;
     v3 = init0 ^ init1;
+    mul0 = v0 + init0;
+    mul1 = v1 ^ init1;
+    mul2 = v2 + init0;
+    mul3 = v3 ^ init1;
   }
 
   inline void Update(V4x64U *out1, V4x64U *out2) {
     v0 += *out1;
     v1 += *out2;
-    V4x64U mul0(_mm256_mul_epu32(v0, Permute(v2)));
-    V4x64U mul1(_mm256_mul_epu32(v1, Permute(v3)));
-    V4x64U mul2(_mm256_mul_epu32(Permute(v0), v2));
-    V4x64U mul3(_mm256_mul_epu32(Permute(v1), v3));
-    v0 ^= ZipperMerge(v2) + key0;
-    v1 ^= ZipperMerge(v3) + key1;
+    v1 ^= mul0;
+    mul0 ^= V4x64U(_mm256_mul_epu32(v0, Permute(v2)));
+    v0 ^= mul1;
+    mul1 ^= V4x64U(_mm256_mul_epu32(v1, Permute(v3)));
+    v3 ^= mul2;
+    mul2 ^= V4x64U(_mm256_mul_epu32(Permute(v0), v2));
+    v2 ^= mul3;
+    mul3 ^= V4x64U(_mm256_mul_epu32(Permute(v1), v3));
+    v0 ^= ZipperMerge(v2);
+    v1 ^= ZipperMerge(v3);
     v2 += ZipperMerge(v0);
     v3 += ZipperMerge(v1);
-    v0 ^= mul1;
-    v1 ^= mul0;
-    v2 ^= mul3;
-    v3 ^= mul2;
     *out1 += v2;
     *out2 += v3;
   }
@@ -121,8 +125,10 @@ class RiverImpl {
   V4x64U v1;
   V4x64U v2;
   V4x64U v3;
-  V4x64U key0;
-  V4x64U key1;
+  V4x64U mul0;
+  V4x64U mul1;
+  V4x64U mul2;
+  V4x64U mul3;
   V4x64U packets[16];
 };  // class RiverImpl
 
