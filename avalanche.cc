@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
   ALIGNED(uint8_t, 64) in[512] = {0,};
   //const size_t hashbits = 512;
   const size_t hashbits = 64;
-  const size_t inbits = 20;
+  const size_t inbits = 24;
   uint32_t *counts = new uint32_t[inbits * hashbits];
   uint32_t sizes[3] = {3, 64, 512};
   //uint32_t sizes[3] = {3, 16, 32};

@@ -61,8 +61,8 @@ class HighwayTreeHashState512 {
     v3 += ZipperMerge(v1);
     v0 ^= mul1;
     v1 ^= mul0;
-    v2 ^= mul2;
-    v3 ^= mul3;
+    v2 ^= mul3;
+    v3 ^= mul2;
   }
 
   INLINE void UpdatePacket(const uint64_t *packets) {
@@ -116,7 +116,7 @@ class HighwayTreeHashState512 {
     Update(packet1, packet2);
   }
 
-  INLINE V4x64U Permute(const V4x64U& val) {
+  static INLINE V4x64U Permute(const V4x64U& val) {
     // For complete mixing, we need to swap the upper and lower 128-bit halves;
     // we also swap all 32-bit halves.
     const V4x64U indices(0x0000000200000003ull, 0x0000000000000001ull,

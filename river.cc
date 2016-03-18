@@ -38,9 +38,9 @@ class RiverImpl {
     v2 = init0 + init1;
     v3 = init0 ^ init1;
     mul0 = v0 + init0;
-    mul1 = v1 ^ init1;
+    mul1 = v1 + init1;
     mul2 = v2 + init0;
-    mul3 = v3 ^ init1;
+    mul3 = v3 + init1;
   }
 
   inline void Update(V4x64U *out1, V4x64U *out2) {

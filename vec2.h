@@ -108,7 +108,7 @@ class V4x64U_cl {
     return *this;
   }
 
-  void print(const char *name) {
+  void print(const char *name) const {
     const uint64_t *p = reinterpret_cast<const uint64_t*>(&v_);
     printf("%s = %016lx%016lx%016lx%016lx\n", name, p[3], p[2], p[1], p[0]);
   }

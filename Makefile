@@ -25,7 +25,10 @@ vec.h \
 vec2.h \
 vec_scalar.h
 
-all: sip_tree_hash river avalanche gendata
+all: sip_tree_hash river avalanche gendata test
+
+test: test.cc
+	$(CC) -Wall -std=c++11 -O2 -march=native test.cc -o test
 
 sip_tree_hash: $(FILES) $(HEADERS)
 	$(CC) -Wall -std=c++11 -O3 -march=native $(FILES) -o sip_tree_hash

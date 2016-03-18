@@ -51,8 +51,8 @@ def x(a,b,c):
     const V4x64U key = LoadU(keys);
     v0 = key ^ init0;
     v1 = key ^ init1;
-    mul0 = init0 + init0;
-    mul1 = init1 ^ init0;
+    mul0 = v0 + init1;
+    mul1 = v1 + init0;
   }
 
   INLINE void Update(const V4x64U& packet) {
